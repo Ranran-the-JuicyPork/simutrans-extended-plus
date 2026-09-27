@@ -5006,7 +5006,8 @@ bool stadt_t::renovate_city_building(gebaeude_t* gb, bool map_generation)
 		// The building is being replaced.  The surrounding landscape may have changed since it was
 		// last built, and the new building should change height along with it, rather than maintain the old
 		// height.  So delete and rebuild, even though it's slower.
-		// In case of failure, we stock the removed buildings.
+		// In case of failure, stock every building that was removed, including
+		// the complete old multi-tile building when the new footprint is smaller.
 		class removed_building {
 		public:
 			const building_desc_t* desc;
@@ -5014,12 +5015,26 @@ bool stadt_t::renovate_city_building(gebaeude_t* gb, bool map_generation)
 			uint8 layout;
 		};
 		vector_tpl<removed_building> removed_buildings;
+
+		// The original building may extend outside the new footprint.  Remove it
+		// as one object so shrinking cannot leave orphaned tiles behind.
+		removed_building original_rb;
+		original_rb.desc = gb_desc;
+		original_rb.pos = gb->get_pos();
+		original_rb.layout = gb->get_tile()->get_layout();
+		removed_buildings.append(original_rb);
+		hausbauer_t::remove(NULL, gb, map_generation);
+
 		for(uint8 x=0; x<(layout&1?h->get_size().y:h->get_size().x); x++) {
 			for(uint8 y=0; y<(layout&1?h->get_size().x:h->get_size().y); y++) {
 				const grund_t* gr = welt->lookup_kartenboden(k+koord(x,y));
-				assert(gr);
+				if(!gr) {
+					continue;
+				}
 				const gebaeude_t* bldg = gr->get_building();
 				if(bldg) {
+					// The original building has already been removed above.  Any
+					// remaining building must therefore be another city building.
 					const building_desc_t* desc = bldg->get_tile()->get_desc();
 					removed_building rb;
 					rb.desc = desc;
