@@ -4771,9 +4771,49 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 		}
 	}
 
-	const int layout = get_best_layout(h, build_pos);
+	int layout = get_best_layout(h, build_pos);
+	const koord actual_size = h->get_size(layout);
+
+	// Remove any single-tile city buildings that the new footprint will
+	// replace through the normal removal path.  Calling obj_loesche_alle()
+	// directly would leave stale entries in the city's building list.
+	class replaced_city_building {
+	public:
+		const building_desc_t* desc;
+		koord3d pos;
+		uint8 layout;
+	};
+	vector_tpl<replaced_city_building> replaced_buildings;
+
+	for (sint8 x = 0; x < actual_size.x; x++) {
+		for (sint8 y = 0; y < actual_size.y; y++) {
+			grund_t* gr = welt->lookup_kartenboden(build_pos + koord(x, y));
+			if (!gr) {
+				continue;
+			}
+			gebaeude_t* bldg = gr->get_building();
+			if (bldg && bldg->is_city_building() && bldg->get_tile()->get_desc()->get_area() == 1) {
+				replaced_city_building rb;
+				rb.desc = bldg->get_tile()->get_desc();
+				rb.pos = bldg->get_pos();
+				rb.layout = bldg->get_tile()->get_layout();
+				replaced_buildings.append(rb);
+				hausbauer_t::remove(NULL, bldg, map_generation);
+			}
+		}
+	}
+
 	gebaeude_t* gb = hausbauer_t::build(NULL, build_gr->get_pos(), layout, h);
 	if (!gb) {
+		// Restore anything that was removed if construction unexpectedly fails.
+		for (uint8 i = 0; i < replaced_buildings.get_count(); i++) {
+			const replaced_city_building& rb = replaced_buildings[i];
+			gebaeude_t* restored = hausbauer_t::build(NULL, rb.pos, rb.layout, rb.desc);
+			if (restored) {
+				restored->set_stadt(this);
+				add_building_to_list(restored, false, map_generation, map_generation);
+			}
+		}
 		return;
 	}
 
