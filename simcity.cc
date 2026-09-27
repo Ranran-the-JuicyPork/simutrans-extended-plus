@@ -4724,7 +4724,7 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 					if (obj->get_typ() == obj_t::gebaeude) {
 						gebaeude_t* const gb = static_cast<gebaeude_t*>(obj);
 						if (gb->is_city_building() && gb->get_tile()->get_desc()->get_size().x * gb->get_tile()->get_desc()->get_size().y == 1 &&
-							gb->get_stadt() == this && gb->get_owner() == NULL) {
+							gb->get_stadt() == this) {
 							continue;
 						}
 					}
