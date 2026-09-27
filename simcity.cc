@@ -4712,6 +4712,13 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 					return false;
 				}
 
+				// City buildings must not be placed on a road.  hausbauer_t::build()
+				// deliberately does not remove way objects, so allowing a road here
+				// would leave the building and the road occupying the same footprint.
+				if (gr->hat_wege()) {
+					return false;
+				}
+
 				for (uint8 i = 0; i < gr->obj_count(); i++) {
 					obj_t* const obj = gr->obj_bei(i);
 					if (obj->get_typ() == obj_t::gebaeude) {
@@ -4744,6 +4751,23 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 					gebaeude_t* const gb = gr->get_building();
 					if (!gb || !gb->is_city_building() || gb->get_tile()->get_desc()->get_size().x * gb->get_tile()->get_desc()->get_size().y != 1) {
 						return false;
+					}
+				}
+
+				// The same XY coordinate can contain several ground levels.  A
+				// multi-tile city building occupies its whole footprint in XY, so
+				// another building on a different level must also block the candidate.
+				const planquadrat_t* const plan = welt->access(p);
+				if (plan) {
+					for (uint8 i = 0; i < plan->get_boden_count(); i++) {
+						grund_t* const other_gr = plan->get_boden_bei(i);
+						if (!other_gr || other_gr == gr) {
+							continue;
+						}
+						gebaeude_t* const other_gb = other_gr->get_building();
+						if (other_gb) {
+							return false;
+						}
 					}
 				}
 
