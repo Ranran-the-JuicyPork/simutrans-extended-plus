@@ -1751,6 +1751,34 @@ stadt_t::~stadt_t()
 					hausbauer_t::remove(welt->get_public_player(), gb, false);
 				}
 			}
+
+			// A building can theoretically exist on the map without having made it
+			// into the city's weighted building list (for example, a malformed
+			// multi-level/legacy placement).  Do one final local map scan before
+			// clearing the city's references so that such buildings cannot survive
+			// city deletion.  hausbauer_t::remove() may remove several tiles at
+			// once, so never cache the building list while doing this.
+			for (sint16 y = lo.y; y <= ur.y; y++) {
+				for (sint16 x = lo.x; x <= ur.x; x++) {
+					const koord p(x, y);
+					const planquadrat_t* const plan = welt->access(p);
+					if (!plan) {
+						continue;
+					}
+					for (uint8 i = 0; i < plan->get_boden_count(); i++) {
+						grund_t* const gr = plan->get_boden_bei(i);
+						if (!gr) {
+							continue;
+					}
+						gebaeude_t* const gb = gr->get_building();
+						if (gb && gb->is_city_building() && gb->get_stadt() == this) {
+							gb->set_stadt(this);
+							hausbauer_t::remove(welt->get_public_player(), gb, false);
+							break;
+						}
+					}
+				}
+			}
 			// avoid the bookkeeping if world geets destroyed
 		}
 		// Remove substations
@@ -4712,10 +4740,11 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 					return false;
 				}
 
-				// City buildings must not be placed on a road.  hausbauer_t::build()
-				// deliberately does not remove way objects, so allowing a road here
-				// would leave the building and the road occupying the same footprint.
-				if (gr->hat_wege()) {
+				// City buildings must not be placed on water or on a road.
+				// hausbauer_t::build() deliberately permits ordinary buildings to
+				// remain on a water grund_t, so this must be rejected here rather
+				// than relying on the normal object-removal path.
+				if (gr->is_water() || gr->hat_wege()) {
 					return false;
 				}
 
