@@ -1744,7 +1744,7 @@ stadt_t::~stadt_t()
 					if(city) {
 						city->buildings.append_unique(gb, gb->get_adjusted_visitor_demand());
 					}
-					buildings.remove_at(0);
+					buildings.remove(gb);
 				}
 				else {
 					gb->set_stadt(this);
