@@ -4650,7 +4650,7 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 	// Do not start from a tile belonging to a multi-tile building: another
 	// growth attempt will handle that building as a whole.
 	if (gebaeude_t* existing = gr_origin->get_building()) {
-		if (existing->is_city_building() && existing->get_tile()->get_desc()->get_area() > 1) {
+		if (existing->is_city_building() && existing->get_tile()->get_desc()->get_size().x * get_tile()->get_desc()->get_size().y > 1) {
 			return;
 		}
 	}
@@ -4716,7 +4716,7 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 					obj_t* const obj = gr->obj_bei(i);
 					if (obj->get_typ() == obj_t::gebaeude) {
 						gebaeude_t* const gb = static_cast<gebaeude_t*>(obj);
-						if (gb->is_city_building() && gb->get_tile()->get_desc()->get_area() == 1 &&
+						if (gb->is_city_building() && gb->get_tile()->get_desc()->get_size().x * get_tile()->get_desc()->get_size().y == 1 &&
 							gb->get_stadt() == this && gb->get_owner() == NULL) {
 							continue;
 						}
@@ -4742,7 +4742,7 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 				}
 				else {
 					gebaeude_t* const gb = gr->get_building();
-					if (!gb || !gb->is_city_building() || gb->get_tile()->get_desc()->get_area() != 1) {
+					if (!gb || !gb->is_city_building() || gb->get_tile()->get_desc()->get_size().x * get_tile()->get_desc()->get_size().y != 1) {
 						return false;
 					}
 				}
@@ -4852,13 +4852,12 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 	}
 
 	for (int i = 0; i < 8; i++) {
-		const grund_t* neighbor = welt->lookup_kartenboden(build_pos + neighbors[i]);
+		grund_t* neighbor = welt->lookup_kartenboden(build_pos + neighbors[i]);
 		if (neighbor && neighbor->get_weg_hang() == neighbor->get_grund_hang()) {
 			process_city_street(*neighbor, welt->get_city_road());
 		}
 	}
 
-	int layout = get_best_layout(h, build_pos);
 	const koord actual_size = h->get_size(layout);
 
 	// Remove any single-tile city buildings that the new footprint will
@@ -4879,7 +4878,7 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 				continue;
 			}
 			gebaeude_t* bldg = gr->get_building();
-			if (bldg && bldg->is_city_building() && bldg->get_tile()->get_desc()->get_area() == 1) {
+			if (bldg && bldg->is_city_building() && bldg->get_tile()->get_desc()->get_size().x * get_tile()->get_desc()->get_size().y == 1) {
 				replaced_city_building rb;
 				rb.desc = bldg->get_tile()->get_desc();
 				rb.pos = bldg->get_pos();
