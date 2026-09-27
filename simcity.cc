@@ -4604,6 +4604,8 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 
 	building_desc_t::btype want_to_have = building_desc_t::unknown;
 	const building_desc_t* h = NULL;
+	koord selected_origin = k_org;
+	koord selected_size(1, 1);
 
 	// Test whether a complete footprint can be occupied at one common height.
 	// Nature tiles and existing single-tile city buildings are both replaceable.
@@ -4712,8 +4714,10 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 				}
 
 				if (h != NULL) {
-					// The selected descriptor has the requested dimensions (possibly
-					// swapped for rotation).  Keep the origin that was tested above.
+					// Remember the exact footprint that was tested.  The descriptor
+					// may have its X/Y dimensions swapped and will be rotated below.
+					selected_origin = origin;
+					selected_size = size;
 					break;
 				}
 			}
@@ -4727,29 +4731,20 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 		return;
 	}
 
-	// Find the best facing after the footprint is known.  get_best_layout()
-	// remains the common Extended orientation routine, so the existing
-	// corner-layout behaviour is preserved.
-	const koord size = h->get_size();
-	koord build_pos = k_org;
-
-	// Find an origin around the anchor for the descriptor's actual footprint.
-	// The selected footprint was already checked above, so choose the first
-	// placement containing the anchor that still fits the actual dimensions.
-	for (sint8 ox = 0; ox < size.x; ox++) {
-		bool found = false;
-		for (sint8 oy = 0; oy < size.y; oy++) {
-			const koord origin = k_org - koord(ox, oy);
-			uint32 dummy1 = 0;
-			uint32 dummy2 = 0;
-			if (footprint_ok(origin, size, dummy1, dummy2)) {
-				build_pos = origin;
-				found = true;
-				break;
-			}
-		}
-		if (found) {
-			break;
+	// Find the best facing after the footprint is known.
+	// get_best_layout() remains the common Extended orientation routine, so
+	// the existing corner-layout behaviour is preserved.  For an asymmetric
+	// building, however, force the parity of the layout to match the footprint
+	// that was actually tested above.
+	const koord build_pos = selected_origin;
+	int layout = get_best_layout(h, build_pos);
+	const koord unrotated_size = h->get_size();
+	if (unrotated_size != selected_size && unrotated_size.x != unrotated_size.y) {
+		// Layouts 0/2 (and 4/6) use the descriptor's native dimensions;
+		// layouts 1/3 (and 5/7) use the swapped dimensions.
+		const bool need_swap = unrotated_size.x == selected_size.y && unrotated_size.y == selected_size.x;
+		if (((layout & 1) != 0) != need_swap) {
+			layout ^= 1;
 		}
 	}
 
