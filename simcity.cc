@@ -4232,7 +4232,7 @@ int stadt_t::get_best_layout(const building_desc_t* h, const koord & k) const {
 	// For multi-tile buildings, inspect the whole footprint rather than only
 	// the anchor tile.  This mirrors the purpose of Standard's orientation
 	// routine while retaining Extended's existing 1x1/corner heuristics below.
-	if (h->get_area() > 1) {
+	if (h->get_size().x * h->get_size().y > 1) {
 		const int max_layout = h->get_all_layouts() < 8 ? h->get_all_layouts() : 8;
 		int best_layout = 0;
 		int best_score = -1;
@@ -4650,7 +4650,7 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 	// Do not start from a tile belonging to a multi-tile building: another
 	// growth attempt will handle that building as a whole.
 	if (gebaeude_t* existing = gr_origin->get_building()) {
-		if (existing->is_city_building() && existing->get_tile()->get_desc()->get_size().x * get_tile()->get_desc()->get_size().y > 1) {
+		if (existing->is_city_building() && existing->get_tile()->get_desc()->get_size().x * existing->get_tile()->get_desc()->get_size().y > 1) {
 			return;
 		}
 	}
@@ -4716,7 +4716,7 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 					obj_t* const obj = gr->obj_bei(i);
 					if (obj->get_typ() == obj_t::gebaeude) {
 						gebaeude_t* const gb = static_cast<gebaeude_t*>(obj);
-						if (gb->is_city_building() && gb->get_tile()->get_desc()->get_size().x * get_tile()->get_desc()->get_size().y == 1 &&
+						if (gb->is_city_building() && gb->get_tile()->get_desc()->get_size().x * gb->get_tile()->get_desc()->get_size().y == 1 &&
 							gb->get_stadt() == this && gb->get_owner() == NULL) {
 							continue;
 						}
@@ -4742,7 +4742,7 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 				}
 				else {
 					gebaeude_t* const gb = gr->get_building();
-					if (!gb || !gb->is_city_building() || gb->get_tile()->get_desc()->get_size().x * get_tile()->get_desc()->get_size().y != 1) {
+					if (!gb || !gb->is_city_building() || gb->get_tile()->get_desc()->get_size().x * gb->get_tile()->get_desc()->get_size().y != 1) {
 						return false;
 					}
 				}
@@ -4878,7 +4878,7 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 				continue;
 			}
 			gebaeude_t* bldg = gr->get_building();
-			if (bldg && bldg->is_city_building() && bldg->get_tile()->get_desc()->get_size().x * get_tile()->get_desc()->get_size().y == 1) {
+			if (bldg && bldg->is_city_building() && bldg->get_tile()->get_desc()->get_size().x * bldg->get_tile()->get_desc()->get_size().y == 1) {
 				replaced_city_building rb;
 				rb.desc = bldg->get_tile()->get_desc();
 				rb.pos = bldg->get_pos();
