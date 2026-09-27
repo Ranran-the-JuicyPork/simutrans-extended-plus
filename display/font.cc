@@ -241,6 +241,7 @@ bool font_t::load_from_bdf(FILE *bdf_file)
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
 #include FT_TRUETYPE_TABLES_H
+#include <ftbitmap.h>
 
 
 bool font_t::load_from_freetype(const char *fname, int pixel_height)
