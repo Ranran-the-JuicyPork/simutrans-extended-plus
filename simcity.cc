@@ -4538,169 +4538,262 @@ void stadt_t::get_available_building_size(const koord k, vector_tpl<koord> &size
 }
 
 
-void stadt_t::build_city_building(const koord k, bool new_town, bool map_generation)
+void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_generation)
 {
-	grund_t* gr = welt->lookup_kartenboden(k);
-	if (!gr)
-	{
-#if defined DEBUG || defined PROFILE
-		growth_diag.gbc_reject_natur++;
-#endif
-		return;
-	}
-	const koord3d pos(gr->get_pos());
+	// Multi-tile city buildings use the same size-aware house selection machinery
+	// as renovation.  The old Extended implementation always requested (1,1),
+	// which meant that multi-tile city buildings could only ever appear through
+	// renovation.
+	//
+	// The tile passed by the growth algorithm is treated as an anchor.  We try
+	// footprints containing that tile, largest first.  Existing city buildings
+	// may be replaced only when they are single-tile buildings; an existing
+	// multi-tile building must be left intact.
 
-	// Not building on ways (this was actually tested before be the cityrules), but you can construct manually
-	if(  !gr->ist_natur() ) {
+	grund_t* gr_origin = welt->lookup_kartenboden(k_org);
+	if (!gr_origin) {
 #if defined DEBUG || defined PROFILE
 		growth_diag.gbc_reject_natur++;
 #endif
 		return;
 	}
-	// test ownership of all objects that can block construction
-	for(  uint8 i = 0;  i < gr->obj_count();  i++  ) {
-		obj_t *const obj = gr->obj_bei(i);
-		if(  obj->is_deletable(NULL) != NULL  &&  obj->get_typ() != obj_t::pillar && obj->get_typ() != obj_t::pier ) {
-#if defined DEBUG || defined PROFILE
-			growth_diag.gbc_reject_object++;
-#endif
+
+	// Do not start from a tile belonging to a multi-tile building: another
+	// growth attempt will handle that building as a whole.
+	if (gebaeude_t* existing = gr_origin->get_building()) {
+		if (existing->is_city_building() && existing->get_tile()->get_desc()->get_area() > 1) {
 			return;
 		}
-	}
-	// Refuse to build on a slope, when there is a ground right on top of it (=> the house would sit on the bridge then!)
-	if(  gr->get_grund_hang() != slope_t::flat  &&  welt->lookup(koord3d(k, welt->max_hgt(k))) != NULL  ) {
-#if defined DEBUG || defined PROFILE
-		growth_diag.gbc_reject_slope++;
-#endif
-		return;
 	}
 
 	// Divide unemployed by 4, because it counts towards commercial and industrial,
 	// and both of those count 'double' for population relative to residential.
-	int employment_wanted  = get_unemployed() / 4;
+	int employment_wanted = get_unemployed() / 4;
 	int housing_wanted = get_homeless();
 
 	int industrial_suitability, commercial_suitability, residential_suitability;
-	bewerte_res_com_ind(k, industrial_suitability, commercial_suitability, residential_suitability );
+	bewerte_res_com_ind(k_org, industrial_suitability, commercial_suitability, residential_suitability);
 
-	const int sum_industrial   = industrial_suitability  + employment_wanted;
-	const int sum_commercial = commercial_suitability  + employment_wanted;
-	const int sum_residential   = residential_suitability + housing_wanted;
+	const int sum_industrial = industrial_suitability + employment_wanted;
+	const int sum_commercial = commercial_suitability + employment_wanted;
+	const int sum_residential = residential_suitability + housing_wanted;
 
-	// does the timeline allow this building?
 	const uint16 current_month = welt->get_timeline_year_month();
-	const climate cl = welt->get_climate_at_height(welt->max_hgt(k));
-	const uint8 region = welt->get_region(k);
+	const climate cl = welt->get_climate_at_height(welt->max_hgt(k_org));
+	const uint8 region = welt->get_region(k_org);
 
-	// Run through orthogonal neighbors (only) looking for which cluster to build
-	// This is a bitmap -- up to 32 clustering types are allowed.
+	// Collect clusters from all orthogonal neighbouring city buildings.
 	uint32 neighbor_building_clusters = 0;
 	for (int i = 0; i < 4; i++) {
-		const gebaeude_t* neighbor_gb = get_citybuilding_at(k + neighbors[i]);
+		const gebaeude_t* neighbor_gb = get_citybuilding_at(k_org + neighbors[i]);
 		if (neighbor_gb) {
-			// We have a building as a neighbor...
 			neighbor_building_clusters |= neighbor_gb->get_tile()->get_desc()->get_clusters();
 		}
 	}
 
 	bool worker_shortage = false;
 	bool job_shortage = false;
-
-	// This is a temporary system intended to prevent an imbalance between jobs and population
-	// arising until the completely new town growth algorithm is implemented.
 	const sint64 world_jobs = welt->get_finance_history_month(0, karte_t::WORLD_JOBS);
 	const sint64 monthly_job_demand_global = welt->calc_monthly_job_demand();
-	if ((world_jobs * 100l) > (monthly_job_demand_global * 110l))
-	{
+	if ((world_jobs * 100l) > (monthly_job_demand_global * 110l)) {
 		worker_shortage = true;
 	}
-	else if ((monthly_job_demand_global  * 100l) > (world_jobs * 110l))
-	{
+	else if ((monthly_job_demand_global * 100l) > (world_jobs * 110l)) {
 		job_shortage = true;
 	}
 
-	// Find a house to build
-	const koord size_single(1,1);
 	building_desc_t::btype want_to_have = building_desc_t::unknown;
 	const building_desc_t* h = NULL;
 
-	uint32 pier_sub_1_mask=pier_t::get_sub_mask_total(gr);
-	uint32 pier_sub_2_mask=pier_t::get_sub_mask_total(welt->lookup(gr->get_pos()+koord3d(0,0,1)));
+	// Test whether a complete footprint can be occupied at one common height.
+	// Nature tiles and existing single-tile city buildings are both replaceable.
+	// Other objects remain subject to the normal city-building removal rules.
+	auto footprint_ok = [&](const koord origin, const koord size, uint32& pier_sub_1_mask, uint32& pier_sub_2_mask) -> bool {
+		sint8 base_height = -128;
+		pier_sub_1_mask = 0;
+		pier_sub_2_mask = 0;
 
-	if (!worker_shortage && (sum_commercial > sum_industrial  &&  sum_commercial > sum_residential)) {
-		h = hausbauer_t::get_commercial(0, size_single, current_month, cl, region, new_town, neighbor_building_clusters,pier_sub_1_mask,pier_sub_2_mask);
-		if (h != NULL) {
-			want_to_have = building_desc_t::city_com;
-		}
-	}
+		for (sint8 x = 0; x < size.x; x++) {
+			for (sint8 y = 0; y < size.y; y++) {
+				const koord p = origin + koord(x, y);
+				grund_t* gr = welt->lookup_kartenboden(p);
+				if (!gr) {
+					return false;
+				}
 
-	if (!worker_shortage && (h == NULL  &&  sum_industrial > sum_residential  &&  sum_industrial > sum_commercial)) {
-		h = hausbauer_t::get_industrial(0, size_single, current_month, cl, region, new_town, neighbor_building_clusters,pier_sub_1_mask,pier_sub_2_mask);
-		if (h != NULL) {
-			want_to_have = building_desc_t::city_ind;
-		}
-	}
+				for (uint8 i = 0; i < gr->obj_count(); i++) {
+					obj_t* const obj = gr->obj_bei(i);
+					if (obj->is_deletable(NULL) != NULL && obj->get_typ() != obj_t::pillar && obj->get_typ() != obj_t::pier) {
+						return false;
+					}
+				}
 
-	if (h == NULL  &&  ((sum_residential > sum_industrial  &&  sum_residential > sum_commercial) || worker_shortage)) {
-		if (!job_shortage || worker_shortage)
-		{
-			h = hausbauer_t::get_residential(0, size_single, current_month, cl, region, new_town, neighbor_building_clusters,pier_sub_1_mask,pier_sub_2_mask);
+				const sint8 tile_height = gr->get_pos().z + slope_t::max_diff(gr->get_grund_hang());
+				if (base_height == -128) {
+					base_height = tile_height;
+				}
+				else if (base_height != tile_height) {
+					return false;
+				}
+
+				if (gr->ist_natur()) {
+					if (gr->get_grund_hang() != slope_t::flat &&
+						welt->lookup(koord3d(p, welt->max_hgt(p))) != NULL) {
+						return false;
+					}
+				}
+				else {
+					gebaeude_t* const gb = gr->get_building();
+					if (!gb || !gb->is_city_building() || gb->get_tile()->get_desc()->get_area() != 1) {
+						return false;
+					}
+				}
+
+				pier_sub_1_mask |= pier_t::get_sub_mask_total(gr);
+				if (grund_t* upper = welt->lookup(gr->get_pos() + koord3d(0, 0, 1))) {
+					pier_sub_2_mask |= pier_t::get_sub_mask_total(upper);
+				}
+			}
 		}
-		if (h != NULL) {
-			want_to_have = building_desc_t::city_res;
+		return true;
+	};
+
+	// Prefer larger footprints, but try every orientation of the footprint.
+	// The candidate order is intentionally explicit: it is also the order in
+	// which the Standard implementation considers the available areas.
+	static const koord candidate_sizes[] = {
+		koord(3,3), koord(3,2), koord(2,3), koord(2,2),
+		koord(3,1), koord(1,3), koord(2,1), koord(1,2), koord(1,1)
+	};
+
+	const uint8 max_city_size = building_desc_t::get_city_building_max_size();
+	for (uint8 candidate = 0; candidate < lengthof(candidate_sizes) && h == NULL; candidate++) {
+		const koord size = candidate_sizes[candidate];
+		if (size.x > max_city_size || size.y > max_city_size) {
+			continue;
+		}
+
+		// Try every placement that contains the growth anchor.  This is
+		// important for 2x2/3x3 buildings because the growth algorithm does
+		// not otherwise know which corner is the building origin.
+		for (sint8 ox = 0; ox < size.x && h == NULL; ox++) {
+			for (sint8 oy = 0; oy < size.y && h == NULL; oy++) {
+				const koord origin = k_org - koord(ox, oy);
+				uint32 pier_sub_1_mask = 0;
+				uint32 pier_sub_2_mask = 0;
+				if (!footprint_ok(origin, size, pier_sub_1_mask, pier_sub_2_mask)) {
+					continue;
+				}
+
+				if (!worker_shortage && sum_commercial > sum_industrial && sum_commercial > sum_residential) {
+					h = hausbauer_t::get_commercial(0, size, current_month, cl, region, new_town,
+						neighbor_building_clusters, pier_sub_1_mask, pier_sub_2_mask);
+					if (h != NULL) {
+						want_to_have = building_desc_t::city_com;
+					}
+				}
+
+				if (!worker_shortage && h == NULL && sum_industrial > sum_residential && sum_industrial > sum_commercial) {
+					h = hausbauer_t::get_industrial(0, size, current_month, cl, region, new_town,
+						neighbor_building_clusters, pier_sub_1_mask, pier_sub_2_mask);
+					if (h != NULL) {
+						want_to_have = building_desc_t::city_ind;
+					}
+				}
+
+				if (h == NULL && ((sum_residential > sum_industrial && sum_residential > sum_commercial) || worker_shortage)) {
+					if (!job_shortage || worker_shortage) {
+						h = hausbauer_t::get_residential(0, size, current_month, cl, region, new_town,
+							neighbor_building_clusters, pier_sub_1_mask, pier_sub_2_mask);
+					}
+					if (h != NULL) {
+						want_to_have = building_desc_t::city_res;
+					}
+				}
+
+				if (h != NULL) {
+					// The selected descriptor has the requested dimensions (possibly
+					// swapped for rotation).  Keep the origin that was tested above.
+					break;
+				}
+			}
 		}
 	}
 
 	if (h == NULL) {
-		// Found no suitable building.  Return!
 #if defined DEBUG || defined PROFILE
 		growth_diag.gbc_reject_nodesc++;
 #endif
 		return;
 	}
-//	if (h->get_clusters() == 0) {
-//		// This is a non-clustering building.  Do not allow it next to an identical building.
-//		// (This avoids "boring cities", supposedly.)
-//		for (int i = 0; i < 8; i++) {
-//			// Go through the neighbors *again*...
-//			const gebaeude_t* neighbor_gb = get_citybuilding_at(k + neighbors[i]);
-//			if (neighbor_gb != NULL && neighbor_gb->get_tile()->get_desc() == h) {
-//				// Fail.  Get a different building.
-//				return;
-//			}
-//		}
-//	}
 
-	// we have something to built here ...
-	if (h != NULL) {
-		// check for pavement
-		for (int i = 0; i < 8; i++) {
-			// Neighbors goes through these in 'preferred' order, orthogonal first
-			gr = welt->lookup_kartenboden(k + neighbors[i]);
-			if(gr && gr->get_weg_hang() == gr->get_grund_hang())
-			{
-				process_city_street(*gr, welt->get_city_road());
+	// Find the best facing after the footprint is known.  get_best_layout()
+	// remains the common Extended orientation routine, so the existing
+	// corner-layout behaviour is preserved.
+	const koord size = h->get_size();
+	koord build_pos = k_org;
+
+	// Find an origin around the anchor for the descriptor's actual footprint.
+	// The selected footprint was already checked above, so choose the first
+	// placement containing the anchor that still fits the actual dimensions.
+	for (sint8 ox = 0; ox < size.x; ox++) {
+		bool found = false;
+		for (sint8 oy = 0; oy < size.y; oy++) {
+			const koord origin = k_org - koord(ox, oy);
+			uint32 dummy1 = 0;
+			uint32 dummy2 = 0;
+			if (footprint_ok(origin, size, dummy1, dummy2)) {
+				build_pos = origin;
+				found = true;
+				break;
 			}
 		}
-
-		int layout = get_best_layout(h, k);
-
-		gebaeude_t* gb = hausbauer_t::build(NULL, pos, layout, h);
-		add_gebaeude_to_stadt(gb, false, map_generation, map_generation);
-		reset_city_borders();
-
-		switch(want_to_have) {
-			case building_desc_t::city_res:   won += h->get_level() * 10; break;
-			case building_desc_t::city_com:   arb +=  h->get_level() * 20; break;
-			case building_desc_t::city_ind: arb +=  h->get_level() * 20; break;
-			default: break;
+		if (found) {
+			break;
 		}
-#if defined DEBUG || defined PROFILE
-		growth_diag.gbc_built++;
-#endif
 	}
-}
 
+	// A non-flat anchor can still be valid when all tiles share the same
+	// effective base height; hausbauer_t::build() will construct the foundations.
+	const grund_t* build_gr = welt->lookup_kartenboden(build_pos);
+	if (!build_gr) {
+		return;
+	}
+
+	for (int i = 0; i < 8; i++) {
+		const grund_t* neighbor = welt->lookup_kartenboden(build_pos + neighbors[i]);
+		if (neighbor && neighbor->get_weg_hang() == neighbor->get_grund_hang()) {
+			process_city_street(*neighbor, welt->get_city_road());
+		}
+	}
+
+	const int layout = get_best_layout(h, build_pos);
+	gebaeude_t* gb = hausbauer_t::build(NULL, build_gr->get_pos(), layout, h);
+	if (!gb) {
+		return;
+	}
+
+	add_gebaeude_to_stadt(gb, false, map_generation, map_generation);
+	reset_city_borders();
+
+	switch (want_to_have) {
+		case building_desc_t::city_res:
+			won += h->get_level() * 10;
+			break;
+		case building_desc_t::city_com:
+			arb += h->get_level() * 20;
+			break;
+		case building_desc_t::city_ind:
+			arb += h->get_level() * 20;
+			break;
+		default:
+			break;
+	}
+
+#if defined DEBUG || defined PROFILE
+	growth_diag.gbc_built++;
+#endif
+}
 //
 
 bool stadt_t::renovate_city_building(gebaeude_t* gb, bool map_generation)
