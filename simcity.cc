@@ -4897,8 +4897,7 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 			const replaced_city_building& rb = replaced_buildings[i];
 			gebaeude_t* restored = hausbauer_t::build(NULL, rb.pos, rb.layout, rb.desc);
 			if (restored) {
-				restored->set_stadt(this);
-				add_building_to_list(restored, false, map_generation, map_generation);
+				add_gebaeude_to_stadt(restored, false, map_generation, map_generation);
 			}
 		}
 		return;
