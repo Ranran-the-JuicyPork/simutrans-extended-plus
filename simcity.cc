@@ -4484,54 +4484,56 @@ void stadt_t::get_available_building_size(const koord k, vector_tpl<koord> &size
 	assert(gr_origin);
 	const gebaeude_t* gb_origin = gr_origin->get_building();
 	assert(gb_origin);
-	const koord dim_origin = gb_origin->get_tile()->get_desc()->get_size();
-	const uint8 layout_origin = gb_origin->get_tile()->get_layout();
-	for(uint8 w=(layout_origin&1)?dim_origin.y:dim_origin.x; w<=LEN_LIM; w++) {
-		for(uint8 h=(layout_origin&1)?dim_origin.x:dim_origin.y; h<=LEN_LIM; h++) {
+
+	// Check all sizes, not only sizes equal to or larger than the current
+	// building.  This is required for renovation back to a smaller building.
+	// The current building itself is allowed to occupy the candidate area even
+	// when the candidate footprint is smaller: renovation removes the complete
+	// old building before constructing the replacement.
+	for(uint8 w=1; w<=LEN_LIM; w++) {
+		for(uint8 h=1; h<=LEN_LIM; h++) {
 			bool check_continue = true;
 			sint8 height = -100;
-			for(uint8 x=0; x<w; x++) {
-				if(!check_continue) {
-					break;
-				}
+
+			for(uint8 x=0; x<w && check_continue; x++) {
 				for(uint8 y=0; y<h; y++) {
 					const koord p = k + koord(x,y);
 					grund_t* gr = welt->lookup_kartenboden(p);
-					// the tile must be nature or a city building.
-					if(  !gr  ||  !(gr->ist_natur()  ||  (gr->get_building()  &&  gr->get_building()->is_city_building()))) {
+					// The tile must be nature or a city building.
+					if(!gr || !(gr->ist_natur() || (gr->get_building() && gr->get_building()->is_city_building()))) {
 						check_continue = false;
 						break;
 					}
-					// the tile must be in the same height as others.
+
+					// The tile must be at the same effective height as the others.
 					sint8 tile_height;
 					const slope_t::type hang = welt->recalc_natural_slope(p, tile_height);
-					if(hang!=slope_t::flat) {
-						tile_height ++;
+					if(hang != slope_t::flat) {
+						tile_height++;
 					}
-					if(height!=-100  &&  height!=tile_height) {
+					if(height != -100 && height != tile_height) {
 						check_continue = false;
 						break;
 					}
 					height = tile_height;
-					// buildings in the area must not be in the outside of the area.
-					const sint8 x_off = x==0 ? -1 : (x==w-1 ? 1 : 0);
-					const sint8 y_off = y==0 ? -1 : (y==h-1 ? 1 : 0);
+
 					const gebaeude_t* gb = gr->get_building();
-					if(gb  &&  (x==0  ||  y==0  ||  x==w-1  ||  y==h-1)) {
-						const grund_t* neighbor_gr = welt->lookup_kartenboden(k+koord(x_off,y_off));
-						if(neighbor_gr) {
-							const gebaeude_t* neighbor_gb = neighbor_gr->get_building();
-							if(gb==neighbor_gb) {
-								check_continue = false;
-								break;
-							}
+					if(gb && gb != gb_origin && (x==0 || y==0 || x==w-1 || y==h-1)) {
+						// Another multi-tile building must not be cut by the
+						// candidate footprint.
+						const sint8 x_off = x==0 ? -1 : (x==w-1 ? 1 : 0);
+						const sint8 y_off = y==0 ? -1 : (y==h-1 ? 1 : 0);
+						const grund_t* neighbor_gr = welt->lookup_kartenboden(k + koord(x_off,y_off));
+						if(neighbor_gr && neighbor_gr->get_building() == gb) {
+							check_continue = false;
+							break;
 						}
 					}
 				}
 			}
+
 			if(check_continue) {
-				koord s(w,h);
-				sizes.append(s);
+				sizes.append(koord(w,h));
 			}
 		}
 	}
