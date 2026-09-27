@@ -4225,6 +4225,89 @@ int stadt_t::get_best_layout(const building_desc_t* h, const koord & k) const {
 
 	assert(h != NULL);
 
+	// For multi-tile buildings, inspect the whole footprint rather than only
+	// the anchor tile.  This mirrors the purpose of Standard's orientation
+	// routine while retaining Extended's existing 1x1/corner heuristics below.
+	if (h->get_area() > 1) {
+		const int max_layout = min<int>(h->get_all_layouts(), 8);
+		int best_layout = 0;
+		int best_score = -1;
+
+		for (int layout = 0; layout < max_layout; layout++) {
+			const koord dim = h->get_size(layout);
+			int score = 0;
+
+			// Cardinal front edges: S, E, N, W.
+			for (int edge = 0; edge < 4; edge++) {
+				bool selected = false;
+				sint8 dx = 0, dy = 0;
+				int count = 0;
+				switch (edge) {
+					case 0: // south
+						dy = dim.y;
+						for (sint8 x = 0; x < dim.x; x++) {
+							const grund_t* r = welt->lookup_kartenboden(k + koord(x, dy));
+							if (r && r->get_weg_hang() == r->get_grund_hang() && r->hat_weg(road_wt)) count++;
+						}
+						selected = layout == 0;
+						break;
+					case 1: // east
+						dx = dim.x;
+						for (sint8 y = 0; y < dim.y; y++) {
+							const grund_t* r = welt->lookup_kartenboden(k + koord(dx, y));
+							if (r && r->get_weg_hang() == r->get_grund_hang() && r->hat_weg(road_wt)) count++;
+						}
+						selected = layout == 1;
+						break;
+					case 2: // north
+						dy = -1;
+						for (sint8 x = 0; x < dim.x; x++) {
+							const grund_t* r = welt->lookup_kartenboden(k + koord(x, dy));
+							if (r && r->get_weg_hang() == r->get_grund_hang() && r->hat_weg(road_wt)) count++;
+						}
+						selected = layout == 2;
+						break;
+					case 3: // west
+						dx = -1;
+						for (sint8 y = 0; y < dim.y; y++) {
+							const grund_t* r = welt->lookup_kartenboden(k + koord(dx, y));
+							if (r && r->get_weg_hang() == r->get_grund_hang() && r->hat_weg(road_wt)) count++;
+						}
+						selected = layout == 3;
+						break;
+				}
+				if (selected) {
+					score += count * 2;
+				}
+			}
+
+			// Corner layouts (SE, NE, NW, SW) use two adjacent road edges.
+			if (max_layout == 8 && layout >= 4) {
+				static const uint8 corner_edges[4][2] = {{0,1},{2,1},{2,3},{0,3}};
+				for (uint8 e = 0; e < 2; e++) {
+					const uint8 edge = corner_edges[layout-4][e];
+					const sint8 dx = edge == 1 ? dim.x : (edge == 3 ? -1 : 0);
+					const sint8 dy = edge == 0 ? dim.y : (edge == 2 ? -1 : 0);
+					const bool vertical = edge == 1 || edge == 3;
+					for (sint8 n = 0; n < (vertical ? dim.y : dim.x); n++) {
+						const koord p = vertical ? k + koord(dx, n) : k + koord(n, dy);
+						const grund_t* r = welt->lookup_kartenboden(p);
+						if (r && r->get_weg_hang() == r->get_grund_hang() && r->hat_weg(road_wt)) {
+							score++;
+						}
+					}
+				}
+			}
+
+			if (score > best_score) {
+				best_score = score;
+				best_layout = layout;
+			}
+		}
+
+		return best_layout;
+	}
+
 	// Streetdirs is a bitfield of "street directions":
 	// S == 0001 (1)
 	// E == 0010 (2)
