@@ -4625,6 +4625,13 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 
 				for (uint8 i = 0; i < gr->obj_count(); i++) {
 					obj_t* const obj = gr->obj_bei(i);
+					if (obj->get_typ() == obj_t::gebaeude) {
+						gebaeude_t* const gb = static_cast<gebaeude_t*>(obj);
+						if (gb->is_city_building() && gb->get_tile()->get_desc()->get_area() == 1 &&
+							gb->get_stadt() == this && gb->get_owner() == NULL) {
+							continue;
+						}
+					}
 					if (obj->is_deletable(NULL) != NULL && obj->get_typ() != obj_t::pillar && obj->get_typ() != obj_t::pier) {
 						return false;
 					}
