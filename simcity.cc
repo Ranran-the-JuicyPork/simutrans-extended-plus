@@ -4933,6 +4933,13 @@ bool stadt_t::renovate_city_building(gebaeude_t* gb, bool map_generation)
 		return false; // only renovate res, com, ind
 	}
 
+	// City lists contain every tile of a multi-tile building.  Renovation
+	// must always operate on the first tile, which is the building origin.
+	gb = gb->access_first_tile();
+	if (!gb) {
+		return false;
+	}
+
 	// Now we are sure that this is a city building
 	const koord k = gb->get_pos().get_2d();
 
