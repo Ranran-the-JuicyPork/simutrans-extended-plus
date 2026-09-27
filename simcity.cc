@@ -1729,21 +1729,25 @@ stadt_t::~stadt_t()
 		welt->lookup_kartenboden(pos)->set_text(NULL);
 
 		if (!welt->is_destroying()) {
-			// remove city info and houses
+			// Remove city info and houses. hausbauer_t::remove() can remove
+			// all tiles of a multi-tile building from this city's list, so do
+			// not pop an element and then assert that the same pointer is gone.
+			stadt_t* city = NULL;
 			while(!buildings.empty()) {
-
-				gebaeude_t* const gb = buildings.pop_back();
-				assert(  gb!=NULL  &&  !buildings.is_contained(gb)  );
+				gebaeude_t* const gb = buildings[0];
 
 				if(gb->get_tile()->get_desc()->get_type() == building_desc_t::headquarters) {
-					stadt_t *city = welt->find_nearest_city(gb->get_pos().get_2d());
-					gb->set_stadt( city );
+					if (!city) {
+						city = welt->find_nearest_city(gb->get_pos().get_2d());
+					}
+					gb->set_stadt(city);
 					if(city) {
 						city->buildings.append_unique(gb, gb->get_adjusted_visitor_demand());
 					}
+					buildings.remove_at(0);
 				}
 				else {
-					gb->set_stadt( this );
+					gb->set_stadt(this);
 					hausbauer_t::remove(welt->get_public_player(), gb, false);
 				}
 			}
