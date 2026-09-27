@@ -4933,6 +4933,13 @@ bool stadt_t::renovate_city_building(gebaeude_t* gb, bool map_generation)
 		return false;
 	}
 
+	// Do not replace a city building by another building of the same type and
+	// level (or a lower level).  Apart from avoiding pointless work, this is
+	// important now that smaller footprints are valid renovation targets.
+	if (h->get_type() == gb_desc->get_type() && h->get_level() <= gb_desc->get_level()) {
+		return false;
+	}
+
 	vector_tpl<koord> surrounding_pos;
 	for(sint8 x=-1; x<=h->get_size().x; x++) {
 		surrounding_pos.append(k+koord(x,-1));
