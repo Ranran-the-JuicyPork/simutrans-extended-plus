@@ -113,6 +113,13 @@ else
 	AC_MSG_WARN([No backend found, use server (posix)!])
 fi
 
+# FreeType is required by all graphical backends. Do not allow a GUI build
+# to continue with USE_FREETYPE disabled and fail later with "No fonts found!".
+if test "$backend" != "posix" && test "$freetype" != "1"
+then
+	AC_MSG_ERROR([FreeType Library is needed for graphical interface!])
+fi
+
 
 # are we in a svn?
 if svn info
