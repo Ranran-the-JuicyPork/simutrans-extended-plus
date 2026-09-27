@@ -529,7 +529,7 @@
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug (single threaded new)|Win32'">..\OpenTTD\shared\include;..\bzip\include;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug (graphical server)|Win32'">..\OpenTTD\shared\include;..\bzip\include;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug (non-graphical server)|Win32'">..\OpenTTD\shared\include;..\bzip\include;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\zstd-1.4.4\lib;..\freetype-2.10.1\include\freetype;..\miniupnpc;..\OpenTTD\shared\include;..\bzip\include;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)utils\openttd;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Optimised debug|x64'">..\zstd-1.4.4\lib;..\OpenTTD\shared\include;..\bzip\include;..\miniupnpc;..\freetype-2.10.1\include\freetype;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug (no randomness)|x64'">..\OpenTTD\shared\include;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug (single threaded new)|x64'">..\OpenTTD\shared\include;$(IncludePath)</IncludePath>
@@ -549,7 +549,7 @@
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug (single threaded new)|Win32'">..\OpenTTD\win32\library;..\bzip\lib;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug (graphical server)|Win32'">..\OpenTTD\win32\library;..\bzip\lib;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug (non-graphical server)|Win32'">..\OpenTTD\win32\library;..\bzip\lib;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\zstd-1.4.4\build\VS2010\bin\x64_Debug;..\freetype-2.10.1;..\miniupnpc;..\OpenTTD\win64\library;..\bzip\lib\x64;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)utils\openttd\lib;$(LibraryPath)</LibraryPath>
     <!-- Optimised debug uses the optimised (Release) zstd lib. Its Project's Release|x64 has LTCG disabled so it links against the old libbz2.lib, avoiding C1047/LNK1257. -->
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Optimised debug|x64'">..\zstd-1.4.4\build\VS2010\bin\x64_Release;..\miniupnpc;..\OpenTTD\win64\library;..\bzip\lib\x64;..\freetype-2.10.1;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug (no randomness)|x64'">..\OpenTTD\win64\library;..\bzip\lib\x64;$(LibraryPath)</LibraryPath>
@@ -1004,9 +1004,9 @@
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>libzstd_static.lib;kernel32.lib;user32.lib;gdi32.lib;winmm.lib;advapi32.lib;wsock32.lib;libbz2.lib;Strmiids.lib;Ws2_32.lib;shell32.lib;pthreadVC2.lib;miniupnpc.lib;freetype.lib;imm32.lib;libpng.lib;zlibstat.lib;IPHlpApi.Lib</AdditionalDependencies>
+      <AdditionalDependencies>libzstd_static.lib;kernel32.lib;user32.lib;gdi32.lib;winmm.lib;advapi32.lib;wsock32.lib;libbz2.lib;Strmiids.lib;Ws2_32.lib;shell32.lib;pthreadVC2.lib;miniupnpc.lib;libfreetype2.lib;imm32.lib;libpng.lib;zlibstat.lib;IPHlpApi.Lib</AdditionalDependencies>
       <OutputFile>$(OutDir)$(ProjectName)-debug.exe</OutputFile>
-      <AdditionalLibraryDirectories>..\OpenTTD\win64\library;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)utils\openttd\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>libcmt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
