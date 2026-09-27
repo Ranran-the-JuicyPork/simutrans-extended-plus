@@ -4229,7 +4229,7 @@ int stadt_t::get_best_layout(const building_desc_t* h, const koord & k) const {
 	// the anchor tile.  This mirrors the purpose of Standard's orientation
 	// routine while retaining Extended's existing 1x1/corner heuristics below.
 	if (h->get_area() > 1) {
-		const int max_layout = min<int>(h->get_all_layouts(), 8);
+		const int max_layout = h->get_all_layouts() < 8 ? h->get_all_layouts() : 8;
 		int best_layout = 0;
 		int best_score = -1;
 
