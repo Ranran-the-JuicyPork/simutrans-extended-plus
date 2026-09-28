@@ -1359,13 +1359,13 @@ void stadt_t::add_gebaeude_to_stadt(gebaeude_t* gb, bool ordered, bool do_not_ad
 	for (sint8 y = 0; y < size.y; y++) {
 		for (sint8 x = 0; x < size.x; x++) {
 			const koord p = pos + koord(x, y);
-			grund_t* const gr = welt->lookup_kartenboden(p);
+			grund_t* gr = welt->lookup_kartenboden(p);
 			if (!gr) {
 				continue;
 			}
 
 			gebaeude_t* const map_gb = gr->get_building();
-			if (map_gb && map_gb != gb) {
+			if (map_gb && map_gb->get_first_tile() != gb->get_first_tile()) {
 				dbg->warning("stadt_t::add_gebaeude_to_stadt()",
 					"building \"%s\" overlaps building \"%s\" at (%i,%i); removing the old building",
 					map_gb->get_tile()->get_desc()->get_name(),
@@ -1382,8 +1382,8 @@ void stadt_t::add_gebaeude_to_stadt(gebaeude_t* gb, bool ordered, bool do_not_ad
 			}
 
 			gebaeude_t* const map_gb_after_remove = gr->get_building();
-			if (map_gb_after_remove == gb) {
-				add_building_to_list(gb, ordered, do_not_add_to_world_list, do_not_update_stats);
+			if (map_gb_after_remove && map_gb_after_remove->get_first_tile() == gb->get_first_tile()) {
+				add_building_to_list(map_gb_after_remove, ordered, do_not_add_to_world_list, do_not_update_stats);
 			}
 		}
 	}
@@ -5220,7 +5220,7 @@ bool stadt_t::renovate_city_building(gebaeude_t* gb, bool map_generation)
 	// get available building sizes.
 	vector_tpl<koord> available_sizes;
 	get_available_building_size(k, available_sizes);
-	if (available_sizes.empty()) {
+	if (available_sizes.get_count() == 0) {
 		// No valid footprint is available at this location.  In particular,
 		// do not call simrand(0), which can crash during city growth.
 		return false;
