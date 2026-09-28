@@ -3878,21 +3878,30 @@ void stadt_t::check_bau_townhall(bool new_town)
 			}
 		}
 
-		grund_t* gr = welt->lookup_kartenboden(pos);
+\t\tgrund_t* gr = welt->lookup_kartenboden(pos);
 		gebaeude_t* gb = gr ? obj_cast<gebaeude_t>(gr->first_obj()) : NULL;
-		// If a valid town hall already exists elsewhere in the city, do not
-		// create another one merely because the city's origin tile is occupied
-		// by a different building.  Relocation/upgrading continues to use the
-		// existing path when the town hall is actually at the expected position.
+		// Recover the actual town hall if the city's origin tile is stale.
 		if (has_townhall && (!gb || !gb->is_townhall())) {
-			return;
+			for (gebaeude_t* const city_gb : buildings) {
+				if (city_gb && city_gb->get_tile()->get_desc()->is_townhall()) {
+					gb = city_gb->access_first_tile();
+					if (gb) {
+						pos = gb->get_pos().get_2d();
+						gr = welt->lookup_kartenboden(pos);
+					}
+					break;
+				}
+			}
 		}
+		const bool valid_townhall = gb && gb->is_townhall() && gb->get_stadt() == this;
 		bool neugruendung = !has_townhall || !gb || !gb->is_townhall();
 		bool umziehen = !neugruendung;
 		koord alte_str(koord::invalid);
 		koord best_pos(pos);
 		koord k;
 		int old_layout(0);
+		const building_desc_t* old_townhall_desc = NULL;
+		koord3d old_townhall_pos = koord3d::invalid;
 
 		DBG_MESSAGE("check_bau_townhall()", "bev=%d, new=%d name=%s", bev, neugruendung, name.c_str());
 
@@ -3972,27 +3981,14 @@ void stadt_t::check_bau_townhall(bool new_town)
 					}
 				}
 			}
-			// remove old townhall
-			if(  gb  ) {
+			// Save enough information to restore the old town hall if relocation fails.
+			if (gb) {
+				old_townhall_desc = gb->get_tile()->get_desc();
+				old_townhall_pos = gb->get_pos();
 				DBG_MESSAGE("stadt_t::check_bau_townhall()", "delete townhall at (%s)", pos_alt.get_str());
 				hausbauer_t::remove(NULL, gb, false);
 			}
 
-			// replace old space by normal houses level 0 (must be 1x1!)
-			if(  umziehen  ) {
-				for (k.x = 0; k.x < groesse_alt.x; k.x++) {
-					for (k.y = 0; k.y < groesse_alt.y; k.y++) {
-						// we iterate over all tiles, since the townhalls are allowed sizes bigger than 1x1
-						const koord pos = pos_alt + k;
-						gr = welt->lookup_kartenboden(pos);
-						if (gr  &&  gr->ist_natur() &&  gr->kann_alle_obj_entfernen(NULL) == NULL  &&
-							  (  gr->get_grund_hang() == slope_t::flat  ||  welt->lookup(koord3d(k, welt->max_hgt(k))) == NULL  ) ) {
-							DBG_MESSAGE("stadt_t::check_bau_townhall()", "fill empty spot at (%s)", pos.get_str());
-							build_city_building(pos, new_town, false);
-						}
-					}
-				}
-			}
 			else {
 				// make tiles flat, hausbauer_t::remove could have set some natural slopes
 				for(  k.x = 0;  k.x < desc->get_x(old_layout);  k.x++  ) {
@@ -4055,8 +4051,19 @@ void stadt_t::check_bau_townhall(bool new_town)
 		// check, if the was something found
 		if(best_pos==koord::invalid) {
 			dbg->error( "stadt_t::check_bau_townhall", "no better position found!" );
+			if (umziehen && old_townhall_desc && old_townhall_pos != koord3d::invalid) {
+				gebaeude_t* restored = hausbauer_t::build(owner, old_townhall_pos, old_layout, old_townhall_desc);
+				if (restored) {
+					restored->access_first_tile()->set_stadt(this);
+					add_building_to_list(restored->access_first_tile(), false, false, false);
+				}
+				else {
+					dbg->error("stadt_t::check_bau_townhall", "failed to restore old town hall after relocation search failed");
+				}
+			}
 			return;
 		}
+
 		// Clear ordinary 1x1 city buildings from the townhall footprint using
 		// the normal removal path.  add_gebaeude_to_stadt() does not remove a
 		// conflicting object from the map; merely removing it from the city/world
@@ -4077,7 +4084,8 @@ void stadt_t::check_bau_townhall(bool new_town)
 					continue;
 				}
 				gebaeude_t* tile_gb = tile_gr->get_building();
-				if (tile_gb && tile_gb->get_stadt() == this &&
+				const building_desc_t* tile_desc = tile_gb ? tile_gb->get_tile()->get_desc() : NULL;
+				if (tile_gb && tile_desc &&
 					tile_gb->get_tile()->get_desc()->get_size().x * tile_gb->get_tile()->get_desc()->get_size().y == 1 &&
 					(tile_gb->get_tile()->get_desc()->get_type() == building_desc_t::city_res ||
 					 tile_gb->get_tile()->get_desc()->get_type() == building_desc_t::city_com ||
@@ -4105,6 +4113,23 @@ void stadt_t::check_bau_townhall(bool new_town)
 		}
 		DBG_MESSAGE("new townhall", "use layout=%i", layout);
 		add_gebaeude_to_stadt(new_gb);
+
+		// Commit the relocation before filling the former town hall footprint.
+		// If construction failed, the old town hall was restored above.
+		if (umziehen) {
+			for (k.x = 0; k.x < groesse_alt.x; k.x++) {
+				for (k.y = 0; k.y < groesse_alt.y; k.y++) {
+					const koord old_pos = pos_alt + k;
+					gr = welt->lookup_kartenboden(old_pos);
+					if (gr && gr->ist_natur() && gr->kann_alle_obj_entfernen(NULL) == NULL &&
+						(gr->get_grund_hang() == slope_t::flat || welt->lookup(koord3d(k, welt->max_hgt(k))) == NULL)) {
+						DBG_MESSAGE("stadt_t::check_bau_townhall()", "fill empty spot at (%s)", old_pos.get_str());
+						build_city_building(old_pos, new_town, false);
+					}
+				}
+			}
+		}
+
 		// sets has_townhall to true
 		reset_city_borders();
 		DBG_MESSAGE("stadt_t::check_bau_townhall()", "add townhall (bev=%i, ptr=%p)", buildings.get_sum_weight(),welt->lookup_kartenboden(best_pos)->first_obj());
