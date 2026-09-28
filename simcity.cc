@@ -4786,9 +4786,14 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 						// do not rely on is_deletable(): town halls and other
 						// public buildings may be non-deletable while still
 						// occupying the footprint.
-						if (gb->is_city_building() &&
+						if (gb->get_stadt() == this &&
 							gb->get_tile()->get_desc()->get_size().x * gb->get_tile()->get_desc()->get_size().y == 1 &&
-							gb->get_stadt() == this) {
+							(gb->get_tile()->get_desc()->get_type() == building_desc_t::city_res ||
+							 gb->get_tile()->get_desc()->get_type() == building_desc_t::city_com ||
+							 gb->get_tile()->get_desc()->get_type() == building_desc_t::city_ind)) {
+							// Only ordinary 1x1 residential/commercial/industrial city
+							// buildings may be replaced.  Town halls and other special
+							// city buildings must never be part of a growth footprint.
 							continue;
 						}
 						return false;
@@ -4982,7 +4987,11 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 				continue;
 			}
 			gebaeude_t* bldg = gr->get_building();
-			if (bldg && bldg->is_city_building() && bldg->get_tile()->get_desc()->get_size().x * bldg->get_tile()->get_desc()->get_size().y == 1) {
+			if (bldg && bldg->get_stadt() == this &&
+				bldg->get_tile()->get_desc()->get_size().x * bldg->get_tile()->get_desc()->get_size().y == 1 &&
+				(bldg->get_tile()->get_desc()->get_type() == building_desc_t::city_res ||
+				 bldg->get_tile()->get_desc()->get_type() == building_desc_t::city_com ||
+				 bldg->get_tile()->get_desc()->get_type() == building_desc_t::city_ind)) {
 				replaced_city_building rb;
 				rb.desc = bldg->get_tile()->get_desc();
 				rb.pos = bldg->get_pos();
