@@ -6137,8 +6137,15 @@ void stadt_t::build(bool new_town, bool map_generation)
 
 			// Check if the building is actually one eligible for renovation
 			const building_desc_t::btype gb_type = gb->get_tile()->get_desc()->get_type();
-			if (!gb->is_city_building())
-				continue; // Definately not a building we want to renovate
+			if (!gb->is_city_building() ||
+				(gb_type != building_desc_t::city_res &&
+				 gb_type != building_desc_t::city_com &&
+				 gb_type != building_desc_t::city_ind)) {
+				// Renovation applies only to ordinary residential, commercial,
+				// and industrial city buildings.  Town halls and other special
+				// buildings must never be selected as renovation targets.
+				continue;
+			}
 
 			// Apply per-type percentage modifiers to renovation_range, larger values for commercial and especially industrial buildings to fall
 			// into the radius in which renovation is possible
