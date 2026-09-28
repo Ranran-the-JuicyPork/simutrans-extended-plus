@@ -3878,7 +3878,7 @@ void stadt_t::check_bau_townhall(bool new_town)
 			}
 		}
 
-\t\tgrund_t* gr = welt->lookup_kartenboden(pos);
+		grund_t* gr = welt->lookup_kartenboden(pos);
 		gebaeude_t* gb = gr ? obj_cast<gebaeude_t>(gr->first_obj()) : NULL;
 		// Recover the actual town hall if the city's origin tile is stale.
 		if (has_townhall && (!gb || !gb->is_townhall())) {
@@ -4054,7 +4054,7 @@ void stadt_t::check_bau_townhall(bool new_town)
 		// check, if the was something found
 		if(best_pos==koord::invalid) {
 			dbg->error( "stadt_t::check_bau_townhall", "no better position found!" );
-			if (umziehen && old_townhall_desc && old_townhall_pos != koord3d::invalid) {
+			if (old_townhall_desc && old_townhall_pos != koord3d::invalid) {
 				gebaeude_t* restored = hausbauer_t::build(owner, old_townhall_pos, old_layout, old_townhall_desc);
 				if (restored) {
 					restored->access_first_tile()->set_stadt(this);
@@ -4078,6 +4078,7 @@ void stadt_t::check_bau_townhall(bool new_town)
 			const building_desc_t* desc;
 			koord3d pos;
 			uint8 layout;
+			stadt_t* city;
 		};
 		vector_tpl<removed_townhall_building> removed_buildings;
 		for (sint8 x = 0; x < townhall_size.x; x++) {
@@ -4097,6 +4098,7 @@ void stadt_t::check_bau_townhall(bool new_town)
 					rb.desc = tile_gb->get_tile()->get_desc();
 					rb.pos = tile_gb->get_pos();
 					rb.layout = tile_gb->get_tile()->get_layout();
+					rb.city = tile_gb->get_stadt();
 					removed_buildings.append(rb);
 					hausbauer_t::remove(NULL, tile_gb, false);
 				}
@@ -4109,7 +4111,10 @@ void stadt_t::check_bau_townhall(bool new_town)
 				const removed_townhall_building& rb = removed_buildings[i];
 				gebaeude_t* restored = hausbauer_t::build(NULL, rb.pos, rb.layout, rb.desc);
 				if (restored) {
-					add_gebaeude_to_stadt(restored, false, false, false);
+					restored->set_stadt(rb.city);
+					if (rb.city) {
+						rb.city->add_building_to_list(restored, false, false, false);
+					}
 				}
 			}
 			if (umziehen && old_townhall_desc && old_townhall_pos != koord3d::invalid) {
