@@ -4933,31 +4933,6 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 		}
 	}
 
-	const koord actual_size = h->get_size(layout);
-
-	// Re-check the footprint after the final layout has been selected.
-	// get_*() is asked for a candidate size, but the descriptor/layout can
-	// have a different effective footprint.  Never let hausbauer_t::build()
-	// silently erase or overlap an existing multi-tile building.
-	for (sint8 x = 0; x < actual_size.x; x++) {
-		for (sint8 y = 0; y < actual_size.y; y++) {
-			grund_t* gr = welt->lookup_kartenboden(build_pos + koord(x, y));
-			if (!gr) {
-				return;
-			}
-			gebaeude_t* bldg = gr->get_building();
-			if (!bldg) {
-				continue;
-			}
-			const building_desc_t* bldg_desc = bldg->get_tile()->get_desc();
-			if (!bldg->is_city_building() || bldg_desc->get_size().x * bldg_desc->get_size().y != 1) {
-				// An existing multi-tile building (or a non-city building) occupies
-				// this tile.  Reject the candidate rather than allowing build() to
-				// delete part of it and leave inconsistent city bookkeeping.
-				return;
-			}
-		}
-	}
 
 	// Remove any single-tile city buildings that the new footprint will
 	// replace through the normal removal path.  Calling obj_loesche_alle()
