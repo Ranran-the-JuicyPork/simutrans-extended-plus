@@ -1342,32 +1342,60 @@ private:
 // It's therefore not OK to recalc city borders in here.
 void stadt_t::add_gebaeude_to_stadt(gebaeude_t* gb, bool ordered, bool do_not_add_to_world_list, bool do_not_update_stats)
 {
-	if (gb != NULL)
+	if (gb == NULL)
 	{
-		const building_tile_desc_t* tile = gb->get_tile();
-		koord size = tile->get_desc()->get_size(tile->get_layout());
-		const koord pos = gb->get_pos().get_2d() - tile->get_offset();
-		koord k;
+		return;
+	}
 
-		// add all tiles
-		for (k.y = 0; k.y < size.y; k.y++) {
-			for (k.x = 0; k.x < size.x; k.x++) {
-				if (gebaeude_t* const add_gb = obj_cast<gebaeude_t>(welt->lookup_kartenboden(pos + k)->first_obj())) {
-					if(add_gb->get_tile()->get_desc()!=gb->get_tile()->get_desc()) {
-						dbg->warning("stadt_t::add_gebaeude_to_stadt()", "two buildings \"%s\" and \"%s\" at (%i,%i), which might lead to problems", add_gb->get_tile()->get_desc()->get_name(), gb->get_tile()->get_desc()->get_name(), pos.x + k.x, pos.y + k.y);
-						buildings.remove(add_gb);
-						welt->remove_building_from_world_list(add_gb);
-					}
-					else
-					{
-						add_building_to_list(add_gb, ordered, do_not_add_to_world_list, do_not_update_stats);
-					}
-					add_gb->set_stadt(this);
-					if (add_gb->get_tile()->get_desc()->is_townhall()) {
-						has_townhall = true;
-					}
-				}
+	const building_tile_desc_t* tile = gb->get_tile();
+	const koord size = tile->get_desc()->get_size(tile->get_layout());
+	const koord pos = gb->get_pos().get_2d() - tile->get_offset();
+
+	// A building must never be left merely in the city/world bookkeeping lists
+	// when another building actually occupies one of its map tiles.  The old
+	// implementation removed the conflicting building from those lists but
+	// left the object on the map, creating invisible/orphaned buildings which
+	// could later overlap a town hall or crash city growth.
+	for (sint8 y = 0; y < size.y; y++) {
+		for (sint8 x = 0; x < size.x; x++) {
+			const koord p = pos + koord(x, y);
+			grund_t* const gr = welt->lookup_kartenboden(p);
+			if (!gr) {
+				continue;
 			}
+
+			gebaeude_t* const map_gb = gr->get_building();
+			if (map_gb && map_gb != gb) {
+				dbg->warning("stadt_t::add_gebaeude_to_stadt()",
+					"building \"%s\" overlaps building \"%s\" at (%i,%i); removing the old building",
+					map_gb->get_tile()->get_desc()->get_name(),
+					gb->get_tile()->get_desc()->get_name(), p.x, p.y);
+
+				hausbauer_t::remove(NULL, map_gb, false);
+			}
+
+			// Removing a conflicting building can replace/alter the ground tile,
+			// so always re-fetch it before adding the new building to the city list.
+			gr = welt->lookup_kartenboden(p);
+			if (!gr) {
+				continue;
+			}
+
+			gebaeude_t* const map_gb_after_remove = gr->get_building();
+			if (map_gb_after_remove == gb) {
+				add_building_to_list(gb, ordered, do_not_add_to_world_list, do_not_update_stats);
+			}
+		}
+	}
+
+	// Keep the cached town-hall state synchronized with the actual city list.
+	// In particular, removing the last town hall must clear has_townhall, while
+	// adding a town hall must set it.
+	has_townhall = false;
+	for (gebaeude_t* const city_gb : buildings) {
+		if (city_gb && city_gb->get_tile()->get_desc()->is_townhall()) {
+			has_townhall = true;
+			break;
 		}
 	}
 }
@@ -1416,6 +1444,20 @@ void stadt_t::remove_gebaeude_from_stadt(gebaeude_t* gb, bool map_generation, bo
 	buildings.remove(gb);
 
 	gb->set_stadt(NULL);
+
+	// Removing a town hall must immediately invalidate the cached state.
+	// Otherwise the next growth cycle may believe a town hall still exists and
+	// skip rebuilding it, or may try to create a second town hall elsewhere.
+	if (gb->get_tile()->get_desc()->is_townhall()) {
+		has_townhall = false;
+		for (gebaeude_t* const city_gb : buildings) {
+			if (city_gb && city_gb->get_tile()->get_desc()->is_townhall()) {
+				has_townhall = true;
+				break;
+			}
+		}
+	}
+
 	reset_city_borders();
 }
 
@@ -3825,9 +3867,26 @@ void stadt_t::check_bau_townhall(bool new_town)
 {
 	const building_desc_t* desc = hausbauer_t::get_special( bev, building_desc_t::townhall, welt->get_timeline_year_month(), bev == 0, welt->get_climate(pos), welt->get_region(pos) );
 	if(desc != NULL) {
+		// has_townhall is a cached value, so derive it from the actual city
+		// building list before deciding whether a new town hall is needed.
+		has_townhall = false;
+		for (gebaeude_t* const city_gb : buildings) {
+			if (city_gb && city_gb->get_tile()->get_desc()->is_townhall()) {
+				has_townhall = true;
+				break;
+			}
+		}
+
 		grund_t* gr = welt->lookup_kartenboden(pos);
-		gebaeude_t* gb = obj_cast<gebaeude_t>(gr->first_obj());
-		bool neugruendung = !has_townhall ||  !gb || !gb->is_townhall();
+		gebaeude_t* gb = gr ? obj_cast<gebaeude_t>(gr->first_obj()) : NULL;
+		// If a valid town hall already exists elsewhere in the city, do not
+		// create another one merely because the city's origin tile is occupied
+		// by a different building.  Relocation/upgrading continues to use the
+		// existing path when the town hall is actually at the expected position.
+		if (has_townhall && (!gb || !gb->is_townhall())) {
+			return;
+		}
+		bool neugruendung = !has_townhall || !gb || !gb->is_townhall();
 		bool umziehen = !neugruendung;
 		koord alte_str(koord::invalid);
 		koord best_pos(pos);
@@ -5161,6 +5220,11 @@ bool stadt_t::renovate_city_building(gebaeude_t* gb, bool map_generation)
 	// get available building sizes.
 	vector_tpl<koord> available_sizes;
 	get_available_building_size(k, available_sizes);
+	if (available_sizes.empty()) {
+		// No valid footprint is available at this location.  In particular,
+		// do not call simrand(0), which can crash during city growth.
+		return false;
+	}
 	const uint8 size_offset = simrand(available_sizes.get_count(), "bool stadt_t::renovate_city_building");
 
 	// it's important to note buildings of a higher "level" are not strictly better than what they'll be replaced with in this model
