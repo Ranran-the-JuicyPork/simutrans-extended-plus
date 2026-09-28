@@ -4633,16 +4633,38 @@ void stadt_t::get_available_building_size(const koord k, vector_tpl<koord> &size
 					height = tile_height;
 
 					const gebaeude_t* gb = gr->get_building();
-					if(gb && gb != gb_origin && (x==0 || y==0 || x==w-1 || y==h-1)) {
-						// Another multi-tile building must not be cut by the
-						// candidate footprint.
-						const sint8 x_off = x==0 ? -1 : (x==w-1 ? 1 : 0);
-						const sint8 y_off = y==0 ? -1 : (y==h-1 ? 1 : 0);
-						const grund_t* neighbor_gr = welt->lookup_kartenboden(k + koord(x_off,y_off));
-						if(neighbor_gr && neighbor_gr->get_building() == gb) {
-							check_continue = false;
-							break;
+					if(gb && gb != gb_origin) {
+						// A renovation footprint must never overlap another
+						// building.  In particular, do not merely check whether
+						// a multi-tile building is cut at its boundary: a 1x1
+						// building in the middle of a larger candidate footprint
+						// is also an occupied tile.
+						check_continue = false;
+						break;
+					}
+
+					// The same XY coordinate can contain multiple ground
+					// levels.  get_kartenboden() only returns the ordinary
+					// ground, but hausbauer_t::build() can replace that ground
+					// while leaving a building on another level intact.  Such a
+					// building would then visually overlap the renovated
+					// building, so every other level must be checked as well.
+					const planquadrat_t* const plan = welt->access(p);
+					if(plan) {
+						for(uint8 i = 0; i < plan->get_boden_count(); i++) {
+							const grund_t* const other_gr = plan->get_boden_bei(i);
+							if(!other_gr || other_gr == gr) {
+								continue;
+							}
+							const gebaeude_t* const other_gb = other_gr->get_building();
+							if(other_gb && other_gb != gb_origin) {
+								check_continue = false;
+								break;
+							}
 						}
+					}
+					if(!check_continue) {
+						break;
 					}
 				}
 			}
