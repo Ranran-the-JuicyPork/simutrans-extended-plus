@@ -130,6 +130,7 @@ convoi_info_t::convoi_info_t(convoihandle_t cnv) :
 void convoi_info_t::init(convoihandle_t cnv)
 {
 	this->cnv = cnv;
+	cnv_route_index = cnv->front()->get_route_index() - 1;
 	this->mean_convoi_speed = speed_to_kmh(cnv->get_akt_speed()*4);
 	this->max_convoi_speed = speed_to_kmh(cnv->get_min_top_speed()*4);
 	gui_frame_t::set_name(cnv->get_name());
@@ -719,6 +720,7 @@ void convoi_info_t::draw(scr_coord pos, scr_size size)
 	if (!cnv.is_bound() || cnv->in_depot() || cnv->get_vehicle_count() == 0)
 	{
 		destroy_win(this);
+		return;
 	}
 	next_reservation_index = cnv->get_next_reservation_index();
 
@@ -869,10 +871,9 @@ void convoi_info_t::draw(scr_coord pos, scr_size size)
 
 	// update button & labels
 	follow_button.pressed = (welt->get_viewport()->get_follow_convoi()==cnv);
-	update_labels();
-
 	route_bar.set_base(cnv->get_route()->get_count()-1);
 	cnv_route_index = cnv->front()->get_route_index() - 1;
+	update_labels();
 
 	// Hide the x-scrollbar to not hide the tab header.
 	switch (switch_mode.get_active_tab_index()) {
@@ -1067,7 +1068,7 @@ bool convoi_info_t::action_triggered( gui_action_creator_t *comp,value_t /* */)
 
 bool convoi_info_t::infowin_event(const event_t *ev)
 {
-	if(  ev->ev_code == INFOWIN  ) {
+	if(  ev->ev_class == INFOWIN  ) {
 		if( ev->ev_code == WIN_CLOSE) {
 			minimap_t::get_instance()->set_selected_cnv(convoihandle_t());
 		}
