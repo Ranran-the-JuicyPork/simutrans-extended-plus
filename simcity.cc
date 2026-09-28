@@ -4077,9 +4077,7 @@ void stadt_t::check_bau_townhall(bool new_town)
 					continue;
 				}
 				gebaeude_t* tile_gb = tile_gr->get_building();
-				stadt_t* tile_city = tile_gb ? tile_gb->get_stadt() : NULL;
-				const bool orphaned_city_building = tile_gb && tile_city == NULL && tile_gr->get_city() == this;
-				if (tile_gb && (tile_city == this || orphaned_city_building) &&
+				if (tile_gb && tile_gb->get_stadt() == this &&
 					tile_gb->get_tile()->get_desc()->get_size().x * tile_gb->get_tile()->get_desc()->get_size().y == 1 &&
 					(tile_gb->get_tile()->get_desc()->get_type() == building_desc_t::city_res ||
 					 tile_gb->get_tile()->get_desc()->get_type() == building_desc_t::city_com ||
