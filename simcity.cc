@@ -3997,7 +3997,52 @@ void stadt_t::check_bau_townhall(bool new_town)
 			dbg->error( "stadt_t::check_bau_townhall", "no better position found!" );
 			return;
 		}
-		gebaeude_t* new_gb = hausbauer_t::build(owner, welt->lookup_kartenboden(best_pos + offset)->get_pos(), layout, desc);
+		// Clear ordinary 1x1 city buildings from the townhall footprint using
+		// the normal removal path.  add_gebaeude_to_stadt() does not remove a
+		// conflicting object from the map; merely removing it from the city/world
+		// lists would therefore leave two buildings visually overlapping.
+		const koord townhall_pos = best_pos + offset;
+		const koord townhall_size = desc->get_size(layout);
+		class removed_townhall_building {
+		public:
+			const building_desc_t* desc;
+			koord3d pos;
+			uint8 layout;
+		};
+		vector_tpl<removed_townhall_building> removed_buildings;
+		for (sint8 x = 0; x < townhall_size.x; x++) {
+			for (sint8 y = 0; y < townhall_size.y; y++) {
+				grund_t* tile_gr = welt->lookup_kartenboden(townhall_pos + koord(x, y));
+				if (!tile_gr) {
+					continue;
+				}
+				gebaeude_t* tile_gb = tile_gr->get_building();
+				if (tile_gb && tile_gb->get_stadt() == this &&
+					tile_gb->get_tile()->get_desc()->get_size().x * tile_gb->get_tile()->get_desc()->get_size().y == 1 &&
+					(tile_gb->get_tile()->get_desc()->get_type() == building_desc_t::city_res ||
+					 tile_gb->get_tile()->get_desc()->get_type() == building_desc_t::city_com ||
+					 tile_gb->get_tile()->get_desc()->get_type() == building_desc_t::city_ind)) {
+					removed_townhall_building rb;
+					rb.desc = tile_gb->get_tile()->get_desc();
+					rb.pos = tile_gb->get_pos();
+					rb.layout = tile_gb->get_tile()->get_layout();
+					removed_buildings.append(rb);
+					hausbauer_t::remove(NULL, tile_gb, false);
+				}
+			}
+		}
+
+		gebaeude_t* new_gb = hausbauer_t::build(owner, welt->lookup_kartenboden(townhall_pos)->get_pos(), layout, desc);
+		if (!new_gb) {
+			for (uint8 i = 0; i < removed_buildings.get_count(); i++) {
+				const removed_townhall_building& rb = removed_buildings[i];
+				gebaeude_t* restored = hausbauer_t::build(NULL, rb.pos, rb.layout, rb.desc);
+				if (restored) {
+					add_gebaeude_to_stadt(restored, false, false, false);
+				}
+			}
+			return;
+		}
 		DBG_MESSAGE("new townhall", "use layout=%i", layout);
 		add_gebaeude_to_stadt(new_gb);
 		// sets has_townhall to true
