@@ -4740,11 +4740,10 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 					return false;
 				}
 
-				// City buildings must not be placed on water or on a road.
-				// hausbauer_t::build() deliberately permits ordinary buildings to
-				// remain on a water grund_t, so this must be rejected here rather
-				// than relying on the normal object-removal path.
-				if (gr->is_water() || gr->hat_wege()) {
+				// hausbauer_t::build() will create an ordinary building on a
+				// water ground and will also leave a way in place.  A city
+				// building footprint must therefore reject both explicitly.
+				if (gr->is_water() || gr->get_weg(water_wt) != NULL || gr->hat_wege()) {
 					return false;
 				}
 
@@ -4752,12 +4751,21 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 					obj_t* const obj = gr->obj_bei(i);
 					if (obj->get_typ() == obj_t::gebaeude) {
 						gebaeude_t* const gb = static_cast<gebaeude_t*>(obj);
-						if (gb->is_city_building() && gb->get_tile()->get_desc()->get_size().x * gb->get_tile()->get_desc()->get_size().y == 1 &&
+						// The only building that may be replaced is a 1x1
+						// city building belonging to this city.  In particular,
+						// do not rely on is_deletable(): town halls and other
+						// public buildings may be non-deletable while still
+						// occupying the footprint.
+						if (gb->is_city_building() &&
+							gb->get_tile()->get_desc()->get_size().x * gb->get_tile()->get_desc()->get_size().y == 1 &&
 							gb->get_stadt() == this) {
 							continue;
 						}
+						return false;
 					}
-					if (obj->is_deletable(NULL) != NULL && obj->get_typ() != obj_t::pillar && obj->get_typ() != obj_t::pier) {
+					if (obj->is_deletable(NULL) != NULL &&
+						obj->get_typ() != obj_t::pillar &&
+						obj->get_typ() != obj_t::pier) {
 						return false;
 					}
 				}
@@ -4895,6 +4903,20 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 		if (((layout & 1) != 0) != need_swap) {
 			layout ^= 1;
 		}
+	}
+
+	// Re-check the footprint using the actual layout that will be passed to
+	// hausbauer_t::build().  The previous check used the requested candidate
+	// size, but build() uses desc->get_size(layout); those must be identical
+	// before we touch the map.
+	const koord actual_size = h->get_size(layout);
+	if (actual_size != selected_size) {
+		return;
+	}
+	uint32 actual_pier_sub_1_mask = 0;
+	uint32 actual_pier_sub_2_mask = 0;
+	if (!footprint_ok(build_pos, actual_size, actual_pier_sub_1_mask, actual_pier_sub_2_mask)) {
+		return;
 	}
 
 	// A non-flat anchor can still be valid when all tiles share the same
