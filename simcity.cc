@@ -4614,8 +4614,16 @@ void stadt_t::get_available_building_size(const koord k, vector_tpl<koord> &size
 				for(uint8 y=0; y<h; y++) {
 					const koord p = k + koord(x,y);
 					grund_t* gr = welt->lookup_kartenboden(p);
+					// A renovation footprint must not contain any way on the
+					// ground level.  Nature tiles may still have a way on them,
+					// and hausbauer_t::build() can otherwise leave that way in
+					// place under the new building.
+					if(!gr || gr->hat_wege()) {
+						check_continue = false;
+						break;
+					}
 					// The tile must be nature or a city building.
-					if(!gr || !(gr->ist_natur() || (gr->get_building() && gr->get_building()->is_city_building()))) {
+					if(!(gr->ist_natur() || (gr->get_building() && gr->get_building()->is_city_building()))) {
 						check_continue = false;
 						break;
 					}
@@ -4657,7 +4665,7 @@ void stadt_t::get_available_building_size(const koord k, vector_tpl<koord> &size
 								continue;
 							}
 							const gebaeude_t* const other_gb = other_gr->get_building();
-							if(other_gb && other_gb != gb_origin) {
+							if((other_gb && other_gb != gb_origin) || other_gr->hat_wege()) {
 								check_continue = false;
 								break;
 							}
@@ -4824,7 +4832,7 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 							continue;
 						}
 						gebaeude_t* const other_gb = other_gr->get_building();
-						if (other_gb) {
+						if (other_gb || other_gr->hat_wege()) {
 							return false;
 						}
 					}
