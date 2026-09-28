@@ -3894,7 +3894,10 @@ void stadt_t::check_bau_townhall(bool new_town)
 			}
 		}
 		const bool valid_townhall = gb && gb->is_townhall() && gb->get_stadt() == this;
-		bool neugruendung = !has_townhall || !gb || !gb->is_townhall();
+		if (has_townhall && !valid_townhall) {
+			has_townhall = false;
+		}
+		bool neugruendung = !has_townhall;
 		bool umziehen = !neugruendung;
 		koord alte_str(koord::invalid);
 		koord best_pos(pos);
@@ -3989,7 +3992,7 @@ void stadt_t::check_bau_townhall(bool new_town)
 				hausbauer_t::remove(NULL, gb, false);
 			}
 
-			else {
+			if (!umziehen) {
 				// make tiles flat, hausbauer_t::remove could have set some natural slopes
 				for(  k.x = 0;  k.x < desc->get_x(old_layout);  k.x++  ) {
 					for(  k.y = 0;  k.y < desc->get_y(old_layout);  k.y++  ) {
@@ -4107,6 +4110,16 @@ void stadt_t::check_bau_townhall(bool new_town)
 				gebaeude_t* restored = hausbauer_t::build(NULL, rb.pos, rb.layout, rb.desc);
 				if (restored) {
 					add_gebaeude_to_stadt(restored, false, false, false);
+				}
+			}
+			if (umziehen && old_townhall_desc && old_townhall_pos != koord3d::invalid) {
+				gebaeude_t* restored = hausbauer_t::build(owner, old_townhall_pos, old_layout, old_townhall_desc);
+				if (restored) {
+					restored->access_first_tile()->set_stadt(this);
+					add_building_to_list(restored->access_first_tile(), false, false, false);
+				}
+				else {
+					dbg->error("stadt_t::check_bau_townhall", "failed to restore old town hall after relocation build failed");
 				}
 			}
 			return;
