@@ -1383,6 +1383,7 @@ void stadt_t::add_gebaeude_to_stadt(gebaeude_t* gb, bool ordered, bool do_not_ad
 
 			gebaeude_t* const map_gb_after_remove = gr->get_building();
 			if (map_gb_after_remove && map_gb_after_remove->get_first_tile() == gb->get_first_tile()) {
+				map_gb_after_remove->set_stadt(this);
 				add_building_to_list(map_gb_after_remove, ordered, do_not_add_to_world_list, do_not_update_stats);
 			}
 		}
@@ -4076,7 +4077,9 @@ void stadt_t::check_bau_townhall(bool new_town)
 					continue;
 				}
 				gebaeude_t* tile_gb = tile_gr->get_building();
-				if (tile_gb && tile_gb->get_stadt() == this &&
+				stadt_t* tile_city = tile_gb ? tile_gb->get_stadt() : NULL;
+				const bool orphaned_city_building = tile_gb && tile_city == NULL && tile_gr->get_city() == this;
+				if (tile_gb && (tile_city == this || orphaned_city_building) &&
 					tile_gb->get_tile()->get_desc()->get_size().x * tile_gb->get_tile()->get_desc()->get_size().y == 1 &&
 					(tile_gb->get_tile()->get_desc()->get_type() == building_desc_t::city_res ||
 					 tile_gb->get_tile()->get_desc()->get_type() == building_desc_t::city_com ||
