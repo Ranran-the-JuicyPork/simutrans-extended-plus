@@ -6002,6 +6002,13 @@ bool stadt_t::build_bridge(grund_t* bd, ribi_t::ribi direction, bool map_generat
  */
 bool stadt_t::build_road(const koord k, player_t* player_, bool forced, bool map_generation)
 {
+	// A multi-tile town hall owns its complete logical footprint, including
+	// descriptor holes where no building object exists.  City roads must not
+	// turn such a hole into an ordinary road tile.
+	if (get_townhall_footprint_at(k) != NULL) {
+		return false;
+	}
+
 	grund_t* bd = welt->lookup_kartenboden(k);
 
 	if (bd->get_typ() != grund_t::boden) {
