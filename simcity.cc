@@ -5043,7 +5043,7 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 				// footprint, including descriptor holes where no building object
 				// exists on the map tile.  Such a hole must not be treated as
 				// ordinary nature when another city building is being placed.
-				if (get_citybuilding_footprint_at(p) != NULL) {
+				if (get_citybuilding_footprint_at(p) != NULL || get_townhall_footprint_at(p) != NULL) {
 					return false;
 				}
 
