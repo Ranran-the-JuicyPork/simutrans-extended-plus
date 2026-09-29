@@ -3981,11 +3981,21 @@ void stadt_t::check_bau_townhall(bool new_town)
 				for(k.y = 0; k.y < groesse_alt.y; k.y ++) {
 					for(k.x = 0; k.x < groesse_alt.x; k.x ++) {
 						// for buildings with holes the hole could be on a different height ->gr==NULL
+						const building_tile_desc_t* expected_tile = desc_alt->get_tile(old_layout, k.x, k.y);
+
+						// Empty descriptor tiles are intentional holes in the logical
+						// footprint.  hausbauer_t::build() does not create a gebaeude_t
+						// for these tiles, so they must not make an otherwise valid
+						// town hall look broken and trigger relocation.
+						if (expected_tile == NULL || !expected_tile->has_image()) {
+							continue;
+						}
+
 						bool ok = false;
 						if (grund_t *gr = welt->lookup_kartenboden(k + pos)) {
 							if(gebaeude_t *gb_part = gr->find<gebaeude_t>()) {
 								// there may be buildings with holes, so we only remove our building!
-								if (gb_part->get_tile() == desc_alt->get_tile(old_layout, k.x, k.y)) {
+								if (gb_part->get_tile() == expected_tile) {
 									ok = true;
 								}
 							}
@@ -4010,12 +4020,14 @@ void stadt_t::check_bau_townhall(bool new_town)
 				}
 				else {
 					koord k = pos + (old_layout==0 ? koord(0, desc_alt->get_y()) : koord(desc_alt->get_x(),0) );
-					if (welt->lookup_kartenboden(k)->hat_weg(road_wt)) {
-						alte_str = k;
-					}
-					else {
-						k = pos - (old_layout==0 ? koord(0, desc_alt->get_y()) : koord(desc_alt->get_x(),0) );
+					if (welt->is_within_limits(k)) {
 						if (welt->lookup_kartenboden(k)->hat_weg(road_wt)) {
+							alte_str = k;
+						}
+					}
+					if (alte_str == koord::invalid) {
+						k = pos - (old_layout==0 ? koord(0, desc_alt->get_y()) : koord(desc_alt->get_x(),0) );
+						if (welt->is_within_limits(k) && welt->lookup_kartenboden(k)->hat_weg(road_wt)) {
 							alte_str = k;
 						}
 					}
@@ -4177,7 +4189,7 @@ void stadt_t::check_bau_townhall(bool new_town)
 					const koord old_pos = pos_alt + k;
 					gr = welt->lookup_kartenboden(old_pos);
 					if (gr && gr->ist_natur() && gr->kann_alle_obj_entfernen(NULL) == NULL &&
-						(gr->get_grund_hang() == slope_t::flat || welt->lookup(koord3d(k, welt->max_hgt(k))) == NULL)) {
+						(gr->get_grund_hang() == slope_t::flat || welt->lookup(koord3d(old_pos, welt->max_hgt(old_pos))) == NULL)) {
 						DBG_MESSAGE("stadt_t::check_bau_townhall()", "fill empty spot at (%s)", old_pos.get_str());
 						build_city_building(old_pos, new_town, false);
 					}
