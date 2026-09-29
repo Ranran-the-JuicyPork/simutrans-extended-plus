@@ -433,6 +433,8 @@ private:
 	 * This also detects footprint holes, where no gebaeude_t exists on k itself.
 	 */
 	const gebaeude_t* get_citybuilding_footprint_at(const koord k) const;
+	/** Find the town hall whose logical multi-tile footprint contains k. */
+	const gebaeude_t* get_townhall_footprint_at(const koord k) const;
 	void get_available_building_size(const koord k, vector_tpl<koord> &sizes) const;
 	gebaeude_t* check_tiles_height(gebaeude_t* building, koord pos, uint8 layout, bool map_generation);
 
