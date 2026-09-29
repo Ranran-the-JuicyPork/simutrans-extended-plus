@@ -38,7 +38,7 @@
 
 sint16 convoi_info_t::tabstate = -1;
 
-static const char cost_type[BUTTON_COUNT][64] =
+static const char cost_type[convoi_t::MAX_CONVOI_COST][64] =
 {
 	"Seat-km",
 	"Pax-km",
@@ -54,7 +54,7 @@ static const char cost_type[BUTTON_COUNT][64] =
 	"Profit"
 };
 
-static const uint8 cost_type_color[BUTTON_COUNT] =
+static const uint8 cost_type_color[convoi_t::MAX_CONVOI_COST] =
 {
 	COL_FREE_CAPACITY,
 	COL_LIGHT_PURPLE,
@@ -70,7 +70,7 @@ static const uint8 cost_type_color[BUTTON_COUNT] =
 	COL_PROFIT
 };
 
-static const uint8 cost_type_money[BUTTON_COUNT] =
+static const uint8 cost_type_money[convoi_t::MAX_CONVOI_COST] =
 {
 	gui_chart_t::SEAT_KM,
 	gui_chart_t::PAX_KM,
@@ -649,18 +649,18 @@ void convoi_info_t::update_labels()
 
 	if (distance <= 0)
 	{
-		sprintf(distance_display, "0km");
+		snprintf(distance_display, sizeof(distance_display), "0km");
 	}
 	else if (distance < 1)
 	{
-		sprintf(distance_display, "%.0fm", distance * 1000);
+		snprintf(distance_display, sizeof(distance_display), "%.0fm", distance * 1000);
 	}
 	else
 	{
 		uint n_actual = distance < 5 ? 1 : 0;
 		char tmp[10];
 		number_to_string(tmp, distance, n_actual);
-		sprintf(distance_display, "%skm", tmp);
+		snprintf(distance_display, sizeof(distance_display), "%skm", tmp);
 	}
 	distance_label.buf().printf( translator::translate("%s left"), distance_display);
 
@@ -704,9 +704,15 @@ void convoi_info_t::update_labels()
 	}
 
 	// realign container - necessary if strings changed length
-	container_top->set_size( container_top->get_size() );
+	const scr_size old_container_top_size = container_top->get_size();
+	container_top->set_size( old_container_top_size );
 	set_min_windowsize(scr_size(max(D_DEFAULT_WIDTH, get_min_windowsize().w), D_TITLEBAR_HEIGHT + switch_mode.get_pos().y + D_TAB_HEADER_HEIGHT));
-	resize(scr_size(0,0));
+
+	// Resizing the window is only necessary when the layout actually changed.
+	// Avoid forcing a resize on every GUI draw.
+	if (container_top->get_size() != old_container_top_size) {
+		resize(scr_size(0,0));
+	}
 }
 
 
@@ -1017,8 +1023,10 @@ bool convoi_info_t::action_triggered( gui_action_creator_t *comp,value_t /* */)
 
 		if(comp == &reverse_button)
 		{
+			const bool reverse_before = cnv->get_reverse_schedule();
 			cnv->call_convoi_tool('V', NULL);
-			reverse_button.pressed = !reverse_button.pressed;
+			reverse_button.pressed = cnv->get_reverse_schedule();
+			return reverse_button.pressed != reverse_before;
 		}
 	}
 
