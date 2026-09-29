@@ -3747,6 +3747,25 @@ void stadt_t::check_bau_spezial(bool new_town)
 				if (desc->get_all_layouts() > 1) {
 					rotate = (simrand(20, "void stadt_t::check_bau_spezial") & 2) + is_rotate;
 				}
+
+				// Special buildings are allowed to replace removable objects by
+				// hausbauer_t::build().  A town hall must never be one of those
+				// objects: its logical footprint can contain descriptor holes with
+				// no gebaeude_t on the map tile.
+				const koord attraction_size = desc->get_size(rotate);
+				bool overlaps_townhall = false;
+				for (sint8 x = 0; x < attraction_size.x && !overlaps_townhall; x++) {
+					for (sint8 y = 0; y < attraction_size.y; y++) {
+						if (get_townhall_footprint_at(best_pos + koord(x, y)) != NULL) {
+							overlaps_townhall = true;
+							break;
+						}
+					}
+				}
+				if (overlaps_townhall) {
+					return;
+				}
+
 				gebaeude_t* gb = hausbauer_t::build(owner, welt->lookup_kartenboden(best_pos)->get_pos(), rotate, desc);
 				gb->access_first_tile()->set_stadt(this);
 				add_building_to_list(gb->access_first_tile());
@@ -3772,6 +3791,22 @@ void stadt_t::check_bau_spezial(bool new_town)
 			koord best_pos(monument_placefinder_t(welt, radius).find_place(pos, total_size.x, total_size.y, desc->get_allowed_climate_bits(), desc->get_allowed_region_bits()));
 
 			if (best_pos != koord::invalid) {
+				// The monument's road ring is also constructed by removing any
+				// building found on those tiles.  Never let that operation touch
+				// the logical footprint of the town hall.
+				bool overlaps_townhall = false;
+				for (sint16 x = 0; x < total_size.x && !overlaps_townhall; x++) {
+					for (sint16 y = 0; y < total_size.y; y++) {
+						if (get_townhall_footprint_at(best_pos + koord(x, y)) != NULL) {
+							overlaps_townhall = true;
+							break;
+						}
+					}
+				}
+				if (overlaps_townhall) {
+					return;
+				}
+
 				// check if borders around the monument are inside the map limits
 				const bool pre_ok = welt->is_within_limits( koord(best_pos) - koord(1, 1) )  &&  \
 					welt->is_within_limits( koord(best_pos) + total_size + koord(1, 1) );
