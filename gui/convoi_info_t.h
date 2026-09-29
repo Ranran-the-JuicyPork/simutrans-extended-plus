@@ -35,7 +35,6 @@
 #include "components/gui_vehicle_cargoinfo.h"
 
 
-#define BUTTON_COUNT convoi_t::MAX_CONVOI_COST
 
 
 /**
