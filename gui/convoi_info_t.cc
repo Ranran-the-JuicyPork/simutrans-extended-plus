@@ -877,7 +877,6 @@ void convoi_info_t::draw(scr_coord pos, scr_size size)
 	follow_button.pressed = (welt->get_viewport()->get_follow_convoi()==cnv);
 	route_bar.set_base(cnv->get_route()->get_count()-1);
 	cnv_route_index = cnv->front()->get_route_index() - 1;
-	update_labels();
 
 	// Hide the x-scrollbar to not hide the tab header.
 	switch (switch_mode.get_active_tab_index()) {
@@ -892,6 +891,8 @@ void convoi_info_t::draw(scr_coord pos, scr_size size)
 			scroll_times_history.set_show_scroll_x( scroll_times_history.get_size().h > D_SCROLLBAR_HEIGHT );
 			break;
 	}
+
+	update_labels();
 
 	// all gui stuff set => display it
 	gui_frame_t::draw(pos, size);
