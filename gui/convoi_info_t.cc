@@ -704,7 +704,6 @@ void convoi_info_t::update_labels()
 	}
 
 	// Realign container - necessary if strings changed length.
-	const scr_size old_container_top_min_size = container_top->get_min_size();
 	container_top->set_size( container_top->get_size() );
 	set_min_windowsize(scr_size(max(D_DEFAULT_WIDTH, get_min_windowsize().w), D_TITLEBAR_HEIGHT + switch_mode.get_pos().y + D_TAB_HEADER_HEIGHT));
 
