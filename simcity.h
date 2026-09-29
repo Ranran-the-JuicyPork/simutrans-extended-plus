@@ -428,6 +428,11 @@ private:
 	// Subroutines for build_city_building and renovate_city_buiding
 	// @author neroden
 	const gebaeude_t* get_citybuilding_at(const koord k) const;
+	/**
+	 * Find a multi-tile city building whose logical footprint contains k.
+	 * This also detects footprint holes, where no gebaeude_t exists on k itself.
+	 */
+	const gebaeude_t* get_citybuilding_footprint_at(const koord k) const;
 	void get_available_building_size(const koord k, vector_tpl<koord> &sizes) const;
 	gebaeude_t* check_tiles_height(gebaeude_t* building, koord pos, uint8 layout, bool map_generation);
 
