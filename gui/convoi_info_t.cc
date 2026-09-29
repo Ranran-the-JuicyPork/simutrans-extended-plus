@@ -703,29 +703,15 @@ void convoi_info_t::update_labels()
 		img_reverse_route.set_visible(cnv->get_reverse_schedule());
 	}
 
-	// Realign the active tab when its minimum size changes.
-	// gui_tab_panel_t::set_size() propagates the current panel width to the
-	// active tab. Without this, a tab whose contents shrink can remain at its
-	// old minimum width until the window itself is resized.
-	gui_component_t *active_tab = switch_mode.get_aktives_tab();
-	const int active_tab_index = switch_mode.get_active_tab_index();
-	const scr_size active_tab_min_size = active_tab->get_min_size();
-	if (active_tab_index != last_active_tab_index || active_tab_min_size != last_active_tab_min_size) {
-		switch_mode.set_size(switch_mode.get_size());
-		last_active_tab_index = active_tab_index;
-		last_active_tab_min_size = active_tab_min_size;
-	}
-
 	// Realign container - necessary if strings changed length.
 	const scr_size old_container_top_min_size = container_top->get_min_size();
 	container_top->set_size( container_top->get_size() );
 	set_min_windowsize(scr_size(max(D_DEFAULT_WIDTH, get_min_windowsize().w), D_TITLEBAR_HEIGHT + switch_mode.get_pos().y + D_TAB_HEADER_HEIGHT));
 
-	// Resizing the window is only necessary when the layout's minimum size changed.
-	// Avoid forcing a resize on every GUI draw.
-	if (container_top->get_min_size() != old_container_top_min_size) {
-		resize(scr_size(0,0));
-	}
+	// Recompute the complete window layout. A component's actual size can change
+	// even when its minimum size does not, so this must not be conditional on
+	// get_min_size().
+	resize(scr_size(0,0));
 }
 
 
