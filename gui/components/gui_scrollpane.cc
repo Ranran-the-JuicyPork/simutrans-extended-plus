@@ -88,12 +88,18 @@ void gui_scrollpane_t::recalc_sliders(scr_size size)
  */
 void gui_scrollpane_t::recalc_sliders_visible(scr_size size)
 {
+#ifdef DEBUG
+	dbg->message("gui_scrollpane_t::recalc_sliders_visible", "pane=%p size=%d,%d comp=%p comp_size=%d,%d comp_pos=%d,%d old_visible=%d,%d", this, size.w, size.h, comp, comp->get_size().w, comp->get_size().h, comp->get_pos().x, comp->get_pos().y, scroll_x.is_visible(), scroll_y.is_visible());
+#endif
 	scr_coord k = comp->get_size() + comp->get_pos();
 	bool need_x = (k.x > size.w) && b_show_scroll_x;
 	bool need_y = (k.y + need_x * D_SCROLLBAR_HEIGHT > size.h) && b_show_scroll_y;
 	need_x = (k.x + need_y * D_SCROLLBAR_WIDTH > size.w) && b_show_scroll_x;
 	scroll_x.set_visible(need_x);
 	scroll_y.set_visible(need_y);
+#ifdef DEBUG
+	dbg->message("gui_scrollpane_t::recalc_sliders_visible", "pane=%p result visible=%d,%d need=%d,%d", this, scroll_x.is_visible(), scroll_y.is_visible(), need_x, need_y);
+#endif
 }
 
 
@@ -102,6 +108,9 @@ void gui_scrollpane_t::recalc_sliders_visible(scr_size size)
  */
 void gui_scrollpane_t::set_size(scr_size size)
 {
+#ifdef DEBUG
+	dbg->message("gui_scrollpane_t::set_size", "pane=%p new_size=%d,%d comp_before=%d,%d", this, size.w, size.h, comp->get_size().w, comp->get_size().h);
+#endif
 	gui_component_t::set_size(size);
 	recalc_sliders_visible(size);
 
@@ -118,6 +127,9 @@ void gui_scrollpane_t::set_size(scr_size size)
 	c_size.clip_lefttop( comp->get_min_size() );
 	c_size.clip_rightbottom( comp->get_max_size() );
 	comp->set_size(c_size);
+#ifdef DEBUG
+	dbg->message("gui_scrollpane_t::set_size", "pane=%p comp_after=%d,%d scroll=%d,%d client=%d,%d", this, comp->get_size().w, comp->get_size().h, scroll_x.is_visible(), scroll_y.is_visible(), c_size.w, c_size.h);
+#endif
 
 	recalc_sliders(size);
 	show_focused();
@@ -296,6 +308,9 @@ scr_rect gui_scrollpane_t::get_client( void )
  */
 void gui_scrollpane_t::draw(scr_coord pos)
 {
+#ifdef DEBUG
+	dbg->message("gui_scrollpane_t::draw", "pane=%p size=%d,%d comp=%d,%d visible=%d,%d old=%d,%d", this, size.w, size.h, comp->get_size().w, comp->get_size().h, scroll_x.is_visible(), scroll_y.is_visible(), old_comp_size.w, old_comp_size.h);
+#endif
 	// check, if we need to recalc slider size
 	if(  old_comp_size  !=  comp->get_size()  ) {
 		recalc_sliders( size );
