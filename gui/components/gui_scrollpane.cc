@@ -99,15 +99,26 @@ void gui_scrollpane_t::recalc_sliders(scr_size size)
 
 
 /**
+ * Recalculate scrollbar visibility, accounting for the space occupied by the other scrollbar.
+ */
+void gui_scrollpane_t::recalc_sliders_visible(scr_size size)
+{
+	scr_coord k = comp->get_size() + comp->get_pos();
+	bool need_x = (k.x > size.w) && b_show_scroll_x;
+	bool need_y = (k.y + need_x * D_SCROLLBAR_HEIGHT > size.h) && b_show_scroll_y;
+	need_x = (k.x + need_y * D_SCROLLBAR_WIDTH > size.w) && b_show_scroll_x;
+	scroll_x.set_visible(need_x);
+	scroll_y.set_visible(need_y);
+}
+
+
+/**
  * Scrollpanes _must_ be used in this method to set the size
  */
 void gui_scrollpane_t::set_size(scr_size size)
 {
 	gui_component_t::set_size(size);
-	// automatically increase/decrease slider area
-	scr_coord k = comp->get_size()+comp->get_pos();
-	scroll_x.set_visible( (k.x > size.w)  &&  b_show_scroll_x  );
-	scroll_y.set_visible(  (k.y > size.h)  &&  b_show_scroll_y  );
+	recalc_sliders_visible(size);
 
 	// automatically increase/decrease slider area
 	scr_size c_size = size - comp->get_pos();
