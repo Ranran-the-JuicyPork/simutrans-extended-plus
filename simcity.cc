@@ -3902,6 +3902,8 @@ void stadt_t::check_bau_townhall(bool new_town)
 		koord alte_str(koord::invalid);
 		koord best_pos(pos);
 		koord k;
+		koord pos_alt(koord::invalid);
+		koord groesse_alt(0, 0);
 		int old_layout(0);
 		const building_desc_t* old_townhall_desc = NULL;
 		koord3d old_townhall_pos = koord3d::invalid;
@@ -3917,7 +3919,7 @@ void stadt_t::check_bau_townhall(bool new_town)
 			}
 			old_layout = gb->get_tile()->get_layout();
 			const sint8 old_z = gb->get_pos().z;
-			koord pos_alt = best_pos = gr->get_pos().get_2d() - gb->get_tile()->get_offset();
+			pos_alt = best_pos = gr->get_pos().get_2d() - gb->get_tile()->get_offset();
 			// guess layout for broken townhall's
 			if(desc_alt->get_x() != desc_alt->get_y()  &&  desc_alt->get_all_layouts()==1) {
 				// test all layouts
@@ -3934,7 +3936,7 @@ void stadt_t::check_bau_townhall(bool new_town)
 					corner_offset = koord(-corner_offset.y, corner_offset.x);
 				}
 			}
-			koord groesse_alt = desc_alt->get_size(old_layout);
+			groesse_alt = desc_alt->get_size(old_layout);
 
 			// do we need to move
 			if(  old_layout<=desc->get_all_layouts()  &&  desc->get_x(old_layout) <= groesse_alt.x  &&  desc->get_y(old_layout) <= groesse_alt.y  ) {
