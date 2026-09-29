@@ -280,7 +280,7 @@ void convoi_info_t::init(convoihandle_t cnv)
 	add_component(&switch_mode);
 	switch_mode.add_tab(&cont_tab_cargo_info, translator::translate("cd_payload_tab"));
 
-	init_cargo_info_controller();
+	init_cargo_info_controler();
 	scroll_freight.set_maximize(true);
 
 	switch_mode.add_tab(&container_stats, translator::translate("Chart"));
@@ -331,7 +331,7 @@ void convoi_info_t::init(convoihandle_t cnv)
 	set_resizemode(diagonal_resize);
 }
 
-void convoi_info_t::init_cargo_info_controller()
+void convoi_info_t::init_cargo_info_controler()
 {
 	cont_tab_cargo_info.set_table_layout(1,0);
 	// top
@@ -1031,36 +1031,36 @@ bool convoi_info_t::action_triggered( gui_action_creator_t *comp,value_t /* */)
 	}
 
 	// cargo info controll
-	bool cargo_info_controll = false;
+	bool cargo_info_control = false;
 	if(  comp==&selector_ci_depth_from  ) {
 		cargo_info_depth_from = selector_ci_depth_from.get_selection();
-		cargo_info_controll = true;
+		cargo_info_control = true;
 	}
 	else if(  comp==&selector_ci_depth_to  ) {
 		cargo_info_depth_to = selector_ci_depth_to.get_selection();
-		cargo_info_controll = true;
+		cargo_info_control = true;
 	}
 	// sort by what
 	else if(  comp==&freight_sort_selector  ) {
 		env_t::default_sortmode = (uint8)freight_sort_selector.get_selection();
-		cargo_info_controll = true;
+		cargo_info_control = true;
 	}
 	else if(  comp==&sort_order  ) {
 		gui_cargo_info_t::sort_reverse = !gui_cargo_info_t::sort_reverse;
 		sort_order.pressed = !gui_cargo_info_t::sort_reverse;
-		cargo_info_controll = true;
+		cargo_info_control = true;
 	}
 	else if(  comp==&bt_divide_by_wealth  ) {
 		divide_by_wealth = !divide_by_wealth;
 		bt_divide_by_wealth.pressed = divide_by_wealth;
-		cargo_info_controll = true;
+		cargo_info_control = true;
 	}
 	else if(  comp==&bt_separate_by_fare  ) {
 		separate_by_fare = !separate_by_fare;
 		bt_separate_by_fare.pressed = separate_by_fare;
-		cargo_info_controll = true;
+		cargo_info_control = true;
 	}
-	if( cargo_info_controll ) {
+	if( cargo_info_control ) {
 		bool enable_cargo_detail = (cargo_info_depth_from + cargo_info_depth_to);
 		bt_divide_by_wealth.enable(enable_cargo_detail);
 		bt_separate_by_fare.enable(enable_cargo_detail);
