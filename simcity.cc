@@ -4397,6 +4397,56 @@ const gebaeude_t* stadt_t::get_citybuilding_at(const koord k) const {
 
 
 /**
+ * Find a multi-tile city building whose logical footprint contains k.
+ *
+ * Unlike get_citybuilding_at(), this also detects holes in a multi-tile
+ * building: a footprint tile need not contain a gebaeude_t object itself.
+ * The search is deliberately limited to the maximum city-building size.
+ */
+const gebaeude_t* stadt_t::get_citybuilding_footprint_at(const koord k) const {
+	const uint8 max_size = building_desc_t::get_city_building_max_size();
+
+	for (sint8 dx = -(sint8)(max_size - 1); dx <= (sint8)(max_size - 1); dx++) {
+		for (sint8 dy = -(sint8)(max_size - 1); dy <= (sint8)(max_size - 1); dy++) {
+			const koord p = k + koord(dx, dy);
+			const planquadrat_t* const plan = welt->access(p);
+			if (!plan) {
+				continue;
+			}
+
+			for (uint8 i = 0; i < plan->get_boden_count(); i++) {
+				const grund_t* const gr = plan->get_boden_bei(i);
+				if (!gr) {
+					continue;
+				}
+
+				const gebaeude_t* const gb = gr->get_building();
+				if (!gb || !gb->is_city_building() || gb->get_first_tile() != gb) {
+					continue;
+				}
+
+				const building_tile_desc_t* const tile = gb->get_tile();
+				const building_desc_t* const desc = tile->get_desc();
+				const koord size = desc->get_size(tile->get_layout());
+				if (size.x * size.y <= 1) {
+					continue;
+				}
+
+				// get_pos() is the position of this tile. Subtracting its
+				// descriptor offset gives the logical footprint origin.
+				const koord origin = gb->get_pos().get_2d() - tile->get_offset();
+				if (k.x >= origin.x && k.x < origin.x + size.x &&
+					k.y >= origin.y && k.y < origin.y + size.y) {
+					return gb;
+				}
+			}
+		}
+	}
+	return NULL;
+}
+
+
+/**
  * Returns best layout (orientation) for a new city building h at location k.
  * This needs to know the nearby street directions.
  */
@@ -4917,6 +4967,14 @@ void stadt_t::build_city_building(const koord k_org, bool new_town, bool map_gen
 				const koord p = origin + koord(x, y);
 				grund_t* gr = welt->lookup_kartenboden(p);
 				if (!gr) {
+					return false;
+				}
+
+				// A multi-tile city building occupies its whole logical
+				// footprint, including descriptor holes where no building object
+				// exists on the map tile.  Such a hole must not be treated as
+				// ordinary nature when another city building is being placed.
+				if (get_citybuilding_footprint_at(p) != NULL) {
 					return false;
 				}
 
