@@ -280,7 +280,7 @@ void convoi_info_t::init(convoihandle_t cnv)
 	add_component(&switch_mode);
 	switch_mode.add_tab(&cont_tab_cargo_info, translator::translate("cd_payload_tab"));
 
-	init_cargo_info_controler();
+	init_cargo_info_controller();
 	scroll_freight.set_maximize(true);
 
 	switch_mode.add_tab(&container_stats, translator::translate("Chart"));
@@ -331,7 +331,7 @@ void convoi_info_t::init(convoihandle_t cnv)
 	set_resizemode(diagonal_resize);
 }
 
-void convoi_info_t::init_cargo_info_controler()
+void convoi_info_t::init_cargo_info_controller()
 {
 	cont_tab_cargo_info.set_table_layout(1,0);
 	// top
