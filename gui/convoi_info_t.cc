@@ -704,13 +704,13 @@ void convoi_info_t::update_labels()
 	}
 
 	// realign container - necessary if strings changed length
-	const scr_size old_container_top_size = container_top->get_size();
-	container_top->set_size( old_container_top_size );
+	const scr_size old_container_top_min_size = container_top->get_min_size();
+	container_top->set_size( container_top->get_size() );
 	set_min_windowsize(scr_size(max(D_DEFAULT_WIDTH, get_min_windowsize().w), D_TITLEBAR_HEIGHT + switch_mode.get_pos().y + D_TAB_HEADER_HEIGHT));
 
-	// Resizing the window is only necessary when the layout actually changed.
+	// Resizing the window is only necessary when the layout's minimum size changed.
 	// Avoid forcing a resize on every GUI draw.
-	if (container_top->get_size() != old_container_top_size) {
+	if (container_top->get_min_size() != old_container_top_min_size) {
 		resize(scr_size(0,0));
 	}
 }
@@ -1030,7 +1030,7 @@ bool convoi_info_t::action_triggered( gui_action_creator_t *comp,value_t /* */)
 		}
 	}
 
-	// cargo info controll
+	// cargo info control
 	bool cargo_info_control = false;
 	if(  comp==&selector_ci_depth_from  ) {
 		cargo_info_depth_from = selector_ci_depth_from.get_selection();
