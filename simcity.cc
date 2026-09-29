@@ -4479,47 +4479,6 @@ const gebaeude_t* stadt_t::get_citybuilding_footprint_at(const koord k) const {
 	}
 	return NULL;
 }
-const gebaeude_t* stadt_t::get_citybuilding_footprint_at(const koord k) const {
-	const uint8 max_size = building_desc_t::get_city_building_max_size();
-
-	for (sint8 dx = -(sint8)(max_size - 1); dx <= (sint8)(max_size - 1); dx++) {
-		for (sint8 dy = -(sint8)(max_size - 1); dy <= (sint8)(max_size - 1); dy++) {
-			const koord p = k + koord(dx, dy);
-			const planquadrat_t* const plan = welt->access(p);
-			if (!plan) {
-				continue;
-			}
-
-			for (uint8 i = 0; i < plan->get_boden_count(); i++) {
-				const grund_t* const gr = plan->get_boden_bei(i);
-				if (!gr) {
-					continue;
-				}
-
-				const gebaeude_t* const gb = gr->get_building();
-				if (!gb || !gb->is_city_building() || gb->get_first_tile() != gb) {
-					continue;
-				}
-
-				const building_tile_desc_t* const tile = gb->get_tile();
-				const building_desc_t* const desc = tile->get_desc();
-				const koord size = desc->get_size(tile->get_layout());
-				if (size.x * size.y <= 1) {
-					continue;
-				}
-
-				// get_pos() is the position of this tile. Subtracting its
-				// descriptor offset gives the logical footprint origin.
-				const koord origin = gb->get_pos().get_2d() - tile->get_offset();
-				if (k.x >= origin.x && k.x < origin.x + size.x &&
-					k.y >= origin.y && k.y < origin.y + size.y) {
-					return gb;
-				}
-			}
-		}
-	}
-	return NULL;
-}
 
 
 /**
