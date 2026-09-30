@@ -996,8 +996,8 @@ void gui_convoy_spec_table_t::insert_maintenance_rows()
 			td->update();
 		}
 	}
-
-#ifdef DEBUG	// driver
+#ifdef DEBUG
+	// driver
 	new_component<gui_label_t>("(DBG driver)")->set_fixed_width(spec_table_first_col_width);
 	for (uint8 j = 0; j < cnv->get_vehicle_count(); j++) {
 		const vehicle_desc_t *veh_type = cnv->get_vehicle(j)->get_desc();
