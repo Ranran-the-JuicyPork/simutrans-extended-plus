@@ -3240,7 +3240,10 @@ void stadt_t::step_grow_city(bool new_town, bool map_generation)
 #endif
 			int i;
 
-			for (i = 0; i < num_tries && bev * 2 > won + arb + 100; i++) {
+			// A city with no residential population cannot satisfy the normal
+			// population/employment condition, so it would never attempt to build
+			// the first residential building needed to give it a population.
+			for (i = 0; i < num_tries && (get_city_population() == 0 || bev * 2 > won + arb + 100); i++) {
 #if defined DEBUG || defined PROFILE
 				const uint32 built_before = growth_diag.road_built + growth_diag.gbc_built;
 #endif
