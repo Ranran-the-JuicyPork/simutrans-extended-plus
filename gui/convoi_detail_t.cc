@@ -1345,7 +1345,8 @@ void convoi_detail_t::init(convoihandle_t cnv)
 	cont_force.end_table();
 
 	if (cnv->in_depot()) {
-		tabs.set_active_tab_index(3);
+		tabstate = CD_TAB_SPEC_TABLE;
+		tabs.set_active_tab_index(CD_TAB_SPEC_TABLE);
 	}
 
 	update_labels();
