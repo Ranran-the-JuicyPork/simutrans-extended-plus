@@ -38,7 +38,7 @@
 
 sint16 convoi_info_t::tabstate = -1;
 
-static const char cost_type[BUTTON_COUNT][64] =
+static const char cost_type[convoi_t::MAX_CONVOI_COST][64] =
 {
 	"Seat-km",
 	"Pax-km",
@@ -54,7 +54,7 @@ static const char cost_type[BUTTON_COUNT][64] =
 	"Profit"
 };
 
-static const uint8 cost_type_color[BUTTON_COUNT] =
+static const uint8 cost_type_color[convoi_t::MAX_CONVOI_COST] =
 {
 	COL_FREE_CAPACITY,
 	COL_LIGHT_PURPLE,
@@ -70,7 +70,7 @@ static const uint8 cost_type_color[BUTTON_COUNT] =
 	COL_PROFIT
 };
 
-static const uint8 cost_type_money[BUTTON_COUNT] =
+static const uint8 cost_type_money[convoi_t::MAX_CONVOI_COST] =
 {
 	gui_chart_t::SEAT_KM,
 	gui_chart_t::PAX_KM,
@@ -130,6 +130,7 @@ convoi_info_t::convoi_info_t(convoihandle_t cnv) :
 void convoi_info_t::init(convoihandle_t cnv)
 {
 	this->cnv = cnv;
+	cnv_route_index = cnv->front()->get_route_index() - 1;
 	this->mean_convoi_speed = speed_to_kmh(cnv->get_akt_speed()*4);
 	this->max_convoi_speed = speed_to_kmh(cnv->get_min_top_speed()*4);
 	gui_frame_t::set_name(cnv->get_name());
@@ -648,18 +649,18 @@ void convoi_info_t::update_labels()
 
 	if (distance <= 0)
 	{
-		sprintf(distance_display, "0km");
+		snprintf(distance_display, sizeof(distance_display), "0km");
 	}
 	else if (distance < 1)
 	{
-		sprintf(distance_display, "%.0fm", distance * 1000);
+		snprintf(distance_display, sizeof(distance_display), "%.0fm", distance * 1000);
 	}
 	else
 	{
 		uint n_actual = distance < 5 ? 1 : 0;
 		char tmp[10];
 		number_to_string(tmp, distance, n_actual);
-		sprintf(distance_display, "%skm", tmp);
+		snprintf(distance_display, sizeof(distance_display), "%skm", tmp);
 	}
 	distance_label.buf().printf( translator::translate("%s left"), distance_display);
 
@@ -702,9 +703,13 @@ void convoi_info_t::update_labels()
 		img_reverse_route.set_visible(cnv->get_reverse_schedule());
 	}
 
-	// realign container - necessary if strings changed length
+	// Realign container - necessary if strings changed length.
 	container_top->set_size( container_top->get_size() );
 	set_min_windowsize(scr_size(max(D_DEFAULT_WIDTH, get_min_windowsize().w), D_TITLEBAR_HEIGHT + switch_mode.get_pos().y + D_TAB_HEADER_HEIGHT));
+
+	// Recompute the complete window layout. A component's actual size can change
+	// even when its minimum size does not, so this must not be conditional on
+	// get_min_size().
 	resize(scr_size(0,0));
 }
 
@@ -719,6 +724,7 @@ void convoi_info_t::draw(scr_coord pos, scr_size size)
 	if (!cnv.is_bound() || cnv->in_depot() || cnv->get_vehicle_count() == 0)
 	{
 		destroy_win(this);
+		return;
 	}
 	next_reservation_index = cnv->get_next_reservation_index();
 
@@ -869,10 +875,9 @@ void convoi_info_t::draw(scr_coord pos, scr_size size)
 
 	// update button & labels
 	follow_button.pressed = (welt->get_viewport()->get_follow_convoi()==cnv);
-	update_labels();
-
 	route_bar.set_base(cnv->get_route()->get_count()-1);
 	cnv_route_index = cnv->front()->get_route_index() - 1;
+	update_labels();
 
 	// Hide the x-scrollbar to not hide the tab header.
 	switch (switch_mode.get_active_tab_index()) {
@@ -1016,42 +1021,44 @@ bool convoi_info_t::action_triggered( gui_action_creator_t *comp,value_t /* */)
 
 		if(comp == &reverse_button)
 		{
+			const bool reverse_before = cnv->get_reverse_schedule();
 			cnv->call_convoi_tool('V', NULL);
-			reverse_button.pressed = !reverse_button.pressed;
+			reverse_button.pressed = cnv->get_reverse_schedule();
+			return reverse_button.pressed != reverse_before;
 		}
 	}
 
-	// cargo info controll
-	bool cargo_info_controll = false;
+	// cargo info control
+	bool cargo_info_control = false;
 	if(  comp==&selector_ci_depth_from  ) {
 		cargo_info_depth_from = selector_ci_depth_from.get_selection();
-		cargo_info_controll = true;
+		cargo_info_control = true;
 	}
 	else if(  comp==&selector_ci_depth_to  ) {
 		cargo_info_depth_to = selector_ci_depth_to.get_selection();
-		cargo_info_controll = true;
+		cargo_info_control = true;
 	}
 	// sort by what
 	else if(  comp==&freight_sort_selector  ) {
 		env_t::default_sortmode = (uint8)freight_sort_selector.get_selection();
-		cargo_info_controll = true;
+		cargo_info_control = true;
 	}
 	else if(  comp==&sort_order  ) {
 		gui_cargo_info_t::sort_reverse = !gui_cargo_info_t::sort_reverse;
 		sort_order.pressed = !gui_cargo_info_t::sort_reverse;
-		cargo_info_controll = true;
+		cargo_info_control = true;
 	}
 	else if(  comp==&bt_divide_by_wealth  ) {
 		divide_by_wealth = !divide_by_wealth;
 		bt_divide_by_wealth.pressed = divide_by_wealth;
-		cargo_info_controll = true;
+		cargo_info_control = true;
 	}
 	else if(  comp==&bt_separate_by_fare  ) {
 		separate_by_fare = !separate_by_fare;
 		bt_separate_by_fare.pressed = separate_by_fare;
-		cargo_info_controll = true;
+		cargo_info_control = true;
 	}
-	if( cargo_info_controll ) {
+	if( cargo_info_control ) {
 		bool enable_cargo_detail = (cargo_info_depth_from + cargo_info_depth_to);
 		bt_divide_by_wealth.enable(enable_cargo_detail);
 		bt_separate_by_fare.enable(enable_cargo_detail);
@@ -1067,7 +1074,7 @@ bool convoi_info_t::action_triggered( gui_action_creator_t *comp,value_t /* */)
 
 bool convoi_info_t::infowin_event(const event_t *ev)
 {
-	if(  ev->ev_code == INFOWIN  ) {
+	if(  ev->ev_class == INFOWIN  ) {
 		if( ev->ev_code == WIN_CLOSE) {
 			minimap_t::get_instance()->set_selected_cnv(convoihandle_t());
 		}

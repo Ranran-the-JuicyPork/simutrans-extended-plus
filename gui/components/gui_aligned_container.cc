@@ -584,6 +584,11 @@ void gui_aligned_container_t::draw(scr_coord offset)
 		display_fillbox_wh_clip_rgb(shorten(screen_pos.x+1), shorten(screen_pos.y), shorten(get_size().w-2), shorten(get_size().h), SYSCOL_TABLE_BACKGROUND, false);
 	}
 	gui_container_t::draw(offset);
+#ifdef DEBUG
+	if (show_frame) {
+		dbg->message("gui_aligned_container_t::draw", "frame=%p pos=%d,%d size=%d,%d", this, screen_pos.x, screen_pos.y, get_size().w, get_size().h);
+	}
+#endif
 	if (show_frame) {
 		display_ddd_box_clip_rgb(screen_pos.x, screen_pos.y, shorten(get_size().w), shorten(get_size().h), SYSCOL_TABLE_FRAME, SYSCOL_TABLE_FRAME);
 	}

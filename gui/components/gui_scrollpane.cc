@@ -66,35 +66,40 @@ scr_size gui_scrollpane_t::get_max_size() const
  */
 void gui_scrollpane_t::recalc_sliders(scr_size size)
 {
-	scroll_x.set_pos( scr_coord(0, size.h-D_SCROLLBAR_HEIGHT) );
-	scroll_y.set_pos( scr_coord(size.w-D_SCROLLBAR_WIDTH, 0) );
-	if(  b_show_scroll_y  &&  scroll_y.is_visible()  ) {
-		scroll_x.set_size( size-D_SCROLLBAR_SIZE );
-		scroll_x.set_knob( size.w-D_SCROLLBAR_WIDTH, comp->get_size().w + comp->get_pos().x );
-	}
-	else if(  b_has_size_corner  ) {
-		scroll_x.set_size( size-D_SCROLLBAR_SIZE );
-		scroll_x.set_knob( size.w, comp->get_size().w + comp->get_pos().x );
-	}
-	else {
-		scroll_x.set_size( size-D_SCROLLBAR_SIZE );
-		scroll_x.set_knob( size.w, comp->get_size().w + comp->get_pos().x );
-	}
+	scroll_x.set_pos(scr_coord(0, size.h - D_SCROLLBAR_HEIGHT));
+	scroll_y.set_pos(scr_coord(size.w - D_SCROLLBAR_WIDTH, 0));
 
-	if(  b_show_scroll_x  &&  scroll_x.is_visible()  ) {
-		scroll_y.set_size( size-D_SCROLLBAR_SIZE );
-		scroll_y.set_knob( size.h-D_SCROLLBAR_HEIGHT, comp->get_size().h + comp->get_pos().y );
-	}
-	else if(  b_has_size_corner  ) {
-		scroll_y.set_size( size-D_SCROLLBAR_SIZE );
-		scroll_y.set_knob( size.h, comp->get_size().h + comp->get_pos().y );
-	}
-	else {
-		scroll_y.set_size( size-scr_coord(D_SCROLLBAR_WIDTH,0) );
-		scroll_y.set_knob( size.h, comp->get_size().h + comp->get_pos().y );
-	}
+	const scr_coord_val off_x = (b_show_scroll_x && scroll_x.is_visible());
+	const scr_coord_val off_y = (b_show_scroll_y && scroll_y.is_visible());
+	const bool need_sizecorner = off_x || off_y;
+
+	scroll_x.set_size(need_sizecorner ? size - D_SCROLLBAR_SIZE : size);
+	scroll_x.set_knob(size.w - D_SCROLLBAR_WIDTH * off_y, comp->get_size().w + comp->get_pos().x);
+
+	scroll_y.set_size(need_sizecorner ? size - D_SCROLLBAR_SIZE : size);
+	scroll_y.set_knob(size.h - D_SCROLLBAR_HEIGHT * off_x, comp->get_size().h + comp->get_pos().y);
 
 	old_comp_size = comp->get_size();
+}
+
+
+/**
+ * Recalculate scrollbar visibility, accounting for the space occupied by the other scrollbar.
+ */
+void gui_scrollpane_t::recalc_sliders_visible(scr_size size)
+{
+#ifdef DEBUG
+	dbg->message("gui_scrollpane_t::recalc_sliders_visible", "pane=%p size=%d,%d comp=%p comp_size=%d,%d comp_pos=%d,%d old_visible=%d,%d", this, size.w, size.h, comp, comp->get_size().w, comp->get_size().h, comp->get_pos().x, comp->get_pos().y, scroll_x.is_visible(), scroll_y.is_visible());
+#endif
+	scr_coord k = comp->get_size() + comp->get_pos();
+	bool need_x = (k.x > size.w) && b_show_scroll_x;
+	bool need_y = (k.y + need_x * D_SCROLLBAR_HEIGHT > size.h) && b_show_scroll_y;
+	need_x = (k.x + need_y * D_SCROLLBAR_WIDTH > size.w) && b_show_scroll_x;
+	scroll_x.set_visible(need_x);
+	scroll_y.set_visible(need_y);
+#ifdef DEBUG
+	dbg->message("gui_scrollpane_t::recalc_sliders_visible", "pane=%p result visible=%d,%d need=%d,%d", this, scroll_x.is_visible(), scroll_y.is_visible(), need_x, need_y);
+#endif
 }
 
 
@@ -103,25 +108,28 @@ void gui_scrollpane_t::recalc_sliders(scr_size size)
  */
 void gui_scrollpane_t::set_size(scr_size size)
 {
+#ifdef DEBUG
+	dbg->message("gui_scrollpane_t::set_size", "pane=%p new_size=%d,%d comp_before=%d,%d", this, size.w, size.h, comp->get_size().w, comp->get_size().h);
+#endif
 	gui_component_t::set_size(size);
-	// automatically increase/decrease slider area
-	scr_coord k = comp->get_size()+comp->get_pos();
-	scroll_x.set_visible( (k.x > size.w)  &&  b_show_scroll_x  );
-	scroll_y.set_visible(  (k.y > size.h)  &&  b_show_scroll_y  );
+	recalc_sliders_visible(size);
 
 	// automatically increase/decrease slider area
 	scr_size c_size = size - comp->get_pos();
 	// resize scrolled component
 	if (scroll_x.is_visible()) {
-		c_size.h -= scroll_x.get_size().h;
+		c_size.h -= D_SCROLLBAR_HEIGHT;
 	}
 	if (scroll_y.is_visible()) {
-		c_size.w -= scroll_y.get_size().w;
+		c_size.w -= D_SCROLLBAR_WIDTH;
 	}
 
 	c_size.clip_lefttop( comp->get_min_size() );
 	c_size.clip_rightbottom( comp->get_max_size() );
 	comp->set_size(c_size);
+#ifdef DEBUG
+	dbg->message("gui_scrollpane_t::set_size", "pane=%p comp_after=%d,%d scroll=%d,%d client=%d,%d", this, comp->get_size().w, comp->get_size().h, scroll_x.is_visible(), scroll_y.is_visible(), c_size.w, c_size.h);
+#endif
 
 	recalc_sliders(size);
 	show_focused();
@@ -300,6 +308,9 @@ scr_rect gui_scrollpane_t::get_client( void )
  */
 void gui_scrollpane_t::draw(scr_coord pos)
 {
+#ifdef DEBUG
+	dbg->message("gui_scrollpane_t::draw", "pane=%p size=%d,%d comp=%d,%d visible=%d,%d old=%d,%d", this, size.w, size.h, comp->get_size().w, comp->get_size().h, scroll_x.is_visible(), scroll_y.is_visible(), old_comp_size.w, old_comp_size.h);
+#endif
 	// check, if we need to recalc slider size
 	if(  old_comp_size  !=  comp->get_size()  ) {
 		recalc_sliders( size );
