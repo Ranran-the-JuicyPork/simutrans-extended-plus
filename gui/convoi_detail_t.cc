@@ -1506,6 +1506,14 @@ void convoi_detail_t::draw(scr_coord pos, scr_size size)
 		sint32 sp_soll = 0;
 		sint32 sp_soll_min = 0;
 		sint32 sp_soll_max = 0;
+		// Rebuild the complete acceleration curve from scratch. Without clearing
+		// the previous values, removing all powered vehicles leaves stale curve points.
+		for (int j = 0; j < SPEED_RECORDS; j++) {
+			for (int k = 0; k < MAX_ACCEL_CURVES; k++) {
+				accel_curves[j][k] = 0;
+			}
+		}
+
 		int i = SPEED_RECORDS - 1;
 		long delta_t = 1000;
 		sint32 delta_s = (welt->get_settings().ticks_to_seconds(delta_t)).to_sint32();
