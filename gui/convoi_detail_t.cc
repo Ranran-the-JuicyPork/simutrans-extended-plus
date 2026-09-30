@@ -997,8 +997,7 @@ void gui_convoy_spec_table_t::insert_maintenance_rows()
 		}
 	}
 
-#ifdef DEBUG
-	// driver
+#ifdef DEBUG	// driver
 	new_component<gui_label_t>("(DBG driver)")->set_fixed_width(spec_table_first_col_width);
 	for (uint8 j = 0; j < cnv->get_vehicle_count(); j++) {
 		const vehicle_desc_t *veh_type = cnv->get_vehicle(j)->get_desc();
@@ -1481,7 +1480,7 @@ void convoi_detail_t::draw(scr_coord pos, scr_size size)
 	retire_button.pressed = cnv->get_depot_when_empty();
 	class_management_button.pressed = win_get_magic(magic_class_manager+cnv.get_id());
 
-	if (tabs.get_active_tab_index()==CD_TAB_PHYSICS_CHARTS) {
+	if (tabs.get_active_tab_index()==CD_TAB_PHYSICS_CHARTS && physics_chart_dirty) {
 		// common existing_convoy_t for acceleration curve and weight/speed info.
 		convoi_t &convoy = *cnv.get_rep();
 
@@ -1577,8 +1576,20 @@ void convoi_detail_t::draw(scr_coord pos, scr_size size)
 				}
 			}
 		}
+		else {
+			// No usable speed range: explicitly clear the previous chart state.
+			te_curve_abort_x = 0;
+			force_chart.set_abort_display_x(0);
+			force_chart.set_dimension(0, 10000);
+			force_chart.set_seed(-1);
+			force_chart.set_x_axis_span(1);
+			for (int j = 0; j < SPEED_RECORDS; j++) {
+				force_curves[j][0] = 0;
+				force_curves[j][1] = 0;
+			}
+		}
+		physics_chart_dirty = false;
 	}
-
 	update_labels();
 
 	// all gui stuff set => display it
