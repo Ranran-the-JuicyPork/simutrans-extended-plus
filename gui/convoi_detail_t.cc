@@ -45,8 +45,6 @@
 #define L_COL_ACCEL_FULL COL_ORANGE_RED
 #define L_COL_ACCEL_EMPTY COL_DODGER_BLUE
 
-sint16 convoi_detail_t::tabstate = -1;
-
 class convoy_t;
 
 static const uint8 physics_curves_color[MAX_PHYSICS_CURVES] =
@@ -1688,6 +1686,7 @@ void convoi_detail_t::rdwr(loadsave_t *file)
 		w->set_windowsize( size );
 		w->scrolly_maintenance.set_scroll_position( xoff, yoff );
 		w->scrollx_formation.set_scroll_position(formation_xoff, formation_yoff);
+		w->tabstate = selected_tab;
 		w->tabs.set_active_tab_index(selected_tab);
 		w->cont_payload_info.set_cnv(cnv);
 		// we must invalidate halthandle

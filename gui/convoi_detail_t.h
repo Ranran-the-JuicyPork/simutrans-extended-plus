@@ -236,7 +236,7 @@ private:
 	gui_scrollpane_t scrolly_maintenance;
 	gui_scrollpane_t scroll_spec;
 
-	static sint16 tabstate;
+	sint16 tabstate = CD_TAB_MAINTENANCE;
 	gui_tab_panel_t switch_chart;
 	gui_tab_panel_t tabs;
 
