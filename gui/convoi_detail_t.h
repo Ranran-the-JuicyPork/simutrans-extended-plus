@@ -264,10 +264,11 @@ private:
 	sint64 force_curves[SPEED_RECORDS][MAX_FORCE_CURVES];
 	uint8 te_curve_abort_x = SPEED_RECORDS;
 
-bool maintenance_info_dirty = true;
+	// gui update state
+	bool maintenance_info_dirty = true;
 	bool payload_info_dirty = true;
 	sint64 maintenance_seed = 0;
-	sint64 payload_seed = 0; // gui update flags
+	sint64 payload_seed = 0;
 
 	void update_labels();
 
@@ -291,7 +292,7 @@ public:
 	 */
 	void update_data() { set_dirty(); }
 
-// called when fare class or convoy cargo was changed
+	// called when fare class or convoy cargo was changed
 	void update_cargo_info() { payload_info_dirty = true; set_dirty(); }
 
 	// called when the convoy composition or livery was changed
