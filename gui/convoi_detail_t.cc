@@ -45,8 +45,6 @@
 #define L_COL_ACCEL_FULL COL_ORANGE_RED
 #define L_COL_ACCEL_EMPTY COL_DODGER_BLUE
 
-sint16 convoi_detail_t::tabstate = -1;
-
 class convoy_t;
 
 static const uint8 physics_curves_color[MAX_PHYSICS_CURVES] =
@@ -329,7 +327,12 @@ gui_convoy_spec_table_t::gui_convoy_spec_table_t(convoihandle_t c)
 	}
 
 	if( cnv.is_bound() ) {
-		update_seed = cnv->get_vehicle_count() + world()->get_current_month() + cnv->get_current_schedule_order() + spec_table_mode + show_sideview;
+		update_seed =
+			((uint64)cnv->get_vehicle_count() << 56) |
+			((uint64)world()->get_current_month() << 24) |
+			((uint64)cnv->get_current_schedule_order() << 8) |
+			((uint64)spec_table_mode << 1) |
+			(show_sideview ? 1 : 0);
 		update();
 	}
 }
@@ -801,10 +804,7 @@ void gui_convoy_spec_table_t::insert_payload_rows()
 		}
 
 		// Convoy total value
-		if (cnv->get_vehicle_count() == 1) {
-			; // nothing to do
-		}
-		else {
+		if (cnv->get_vehicle_count() > 1) {
 			gui_table_cell_buf_t *td = new_component<gui_table_cell_buf_t>("", SYSCOL_TD_BACKGROUND_SUM, gui_label_t::centered);
 			switch (i) {
 				case SPEC_CATERING:
@@ -842,11 +842,11 @@ void gui_convoy_spec_table_t::insert_payload_rows()
 void gui_convoy_spec_table_t::insert_maintenance_rows()
 {
 	const uint16 month_now = world()->get_timeline_year_month();
-	const bool is_aircraft = cnv->front()->get_waytype() == air_wt;
-	uint32 total; // for calculate convoy total
+	// const bool is_aircraft = cnv->front()->get_waytype() == air_wt;
+	// uint32 total; // for calculate convoy total
 
 	for (uint8 i = SPECS_MAINTENANCE_START; i < SPECS_MAINTENANCE_END; i++) {
-		total = 0;
+		// total = 0;
 
 		new_component<gui_table_header_t>(spec_table_first_col_text[i], SYSCOL_TH_BACKGROUND_LEFT, gui_label_t::left)->set_fixed_width(spec_table_first_col_width);
 		for (uint8 j=0; j < cnv->get_vehicle_count(); j++) {
@@ -954,10 +954,7 @@ void gui_convoy_spec_table_t::insert_maintenance_rows()
 		}
 
 		// Convoy total value
-		if (cnv->get_vehicle_count() == 1) {
-			; // nothing to do
-		}
-		else {
+		if (cnv->get_vehicle_count() > 1) {
 			gui_table_cell_buf_t *td = new_component<gui_table_cell_buf_t>("", SYSCOL_TD_BACKGROUND_SUM, gui_label_t::centered);
 			switch (i) {
 				case SPEC_AGE:
@@ -999,7 +996,6 @@ void gui_convoy_spec_table_t::insert_maintenance_rows()
 			td->update();
 		}
 	}
-
 #ifdef DEBUG
 	// driver
 	new_component<gui_label_t>("(DBG driver)")->set_fixed_width(spec_table_first_col_width);
@@ -1035,7 +1031,7 @@ void gui_convoy_spec_table_t::insert_constraints_rows()
 
 			switch (i) {
 				case SPEC_IS_TALL:
-					if( veh_type->get_fixed_cost() ) {
+					if( veh_type->get_is_tall() ) {
 						lb->buf().append("*");
 						lb->set_color(COL_WARNING);
 					}
@@ -1061,10 +1057,7 @@ void gui_convoy_spec_table_t::insert_constraints_rows()
 		}
 
 		// Convoy total value
-		if (cnv->get_vehicle_count() == 1) {
-			; // nothing to do
-		}
-		else {
+		if (cnv->get_vehicle_count() > 1) {
 			gui_table_cell_buf_t *td = new_component<gui_table_cell_buf_t>("", SYSCOL_TD_BACKGROUND_SUM, gui_label_t::centered);
 			switch (i) {
 				case SPEC_IS_TALL:
@@ -1087,7 +1080,12 @@ void gui_convoy_spec_table_t::insert_constraints_rows()
 void gui_convoy_spec_table_t::draw(scr_coord offset)
 {
 	if( cnv.is_bound() ) {
-		const uint32 temp_seed = cnv->get_vehicle_count() + world()->get_current_month() + cnv->get_current_schedule_order() + spec_table_mode + show_sideview;
+		const uint64 temp_seed =
+			((uint64)cnv->get_vehicle_count() << 56) |
+			((uint64)world()->get_current_month() << 24) |
+			((uint64)cnv->get_current_schedule_order() << 8) |
+			((uint64)spec_table_mode << 1) |
+			(show_sideview ? 1 : 0);
 
 		if( temp_seed!=update_seed ) {
 			update_seed = temp_seed;
@@ -1346,7 +1344,8 @@ void convoi_detail_t::init(convoihandle_t cnv)
 	cont_force.end_table();
 
 	if (cnv->in_depot()) {
-		tabs.set_active_tab_index(3);
+		tabstate = CD_TAB_SPEC_TABLE;
+		tabs.set_active_tab_index(CD_TAB_SPEC_TABLE);
 	}
 
 	update_labels();
@@ -1371,6 +1370,9 @@ void convoi_detail_t::set_tab_opened()
 			break;
 		case CD_TAB_PHYSICS_CHARTS:
 			ideal_size_h += container_chart.get_size().h + D_V_SPACE*2;
+			break;
+		case CD_TAB_SPEC_TABLE:
+			ideal_size_h += cont_spec_tab.get_size().h;
 			break;
 	}
 	if (get_windowsize().h != ideal_size_h) {
@@ -1407,9 +1409,10 @@ void convoi_detail_t::update_labels()
 
 			const sint64 seed_temp = cnv->is_reversed() + cnv->get_vehicle_count() + world()->get_timeline_year_month();
 
-			if (old_seed != seed_temp) {
-				// something has changed => update
-				old_seed = seed_temp;
+			if (maintenance_info_dirty || maintenance_seed != seed_temp) {
+				// Something has changed, or the maintenance display has been explicitly invalidated.
+				maintenance_seed = seed_temp;
+				maintenance_info_dirty = false;
 				cont_maintenance.update_list();
 			}
 			break;
@@ -1432,9 +1435,10 @@ void convoi_detail_t::update_labels()
 			}
 
 			const sint64 seed_temp = cnv->is_reversed() + cnv->get_vehicle_count() + cnv->get_sum_weight() + cb_loaded_detail.get_selection();
-			if (old_seed != seed_temp) {
-				// something has changed => update
-				old_seed = seed_temp;
+			if (payload_info_dirty || payload_seed != seed_temp) {
+				// Something has changed, or the payload display has been explicitly invalidated.
+				payload_seed = seed_temp;
+				payload_info_dirty = false;
 				cont_payload_info.update_list();
 			}
 			break;
@@ -1476,7 +1480,7 @@ void convoi_detail_t::draw(scr_coord pos, scr_size size)
 	retire_button.pressed = cnv->get_depot_when_empty();
 	class_management_button.pressed = win_get_magic(magic_class_manager+cnv.get_id());
 
-	if (tabs.get_active_tab_index()==CD_TAB_PHYSICS_CHARTS) {
+	if (tabs.get_active_tab_index()==CD_TAB_PHYSICS_CHARTS && physics_chart_dirty) {
 		// common existing_convoy_t for acceleration curve and weight/speed info.
 		convoi_t &convoy = *cnv.get_rep();
 
@@ -1502,6 +1506,14 @@ void convoi_detail_t::draw(scr_coord pos, scr_size size)
 		sint32 sp_soll = 0;
 		sint32 sp_soll_min = 0;
 		sint32 sp_soll_max = 0;
+		// Rebuild the complete acceleration curve from scratch. Without clearing
+		// the previous values, removing all powered vehicles leaves stale curve points.
+		for (int j = 0; j < SPEED_RECORDS; j++) {
+			for (int k = 0; k < MAX_ACCEL_CURVES; k++) {
+				accel_curves[j][k] = 0;
+			}
+		}
+
 		int i = SPEED_RECORDS - 1;
 		long delta_t = 1000;
 		sint32 delta_s = (welt->get_settings().ticks_to_seconds(delta_t)).to_sint32();
@@ -1572,8 +1584,20 @@ void convoi_detail_t::draw(scr_coord pos, scr_size size)
 				}
 			}
 		}
+		else {
+			// No usable speed range: explicitly clear the previous chart state.
+			te_curve_abort_x = 0;
+			force_chart.set_abort_display_x(0);
+			force_chart.set_dimension(0, 10000);
+			force_chart.set_seed(-1);
+			force_chart.set_x_axis_span(1);
+			for (int j = 0; j < SPEED_RECORDS; j++) {
+				force_curves[j][0] = 0;
+				force_curves[j][1] = 0;
+			}
+		}
+		physics_chart_dirty = false;
 	}
-
 	update_labels();
 
 	// all gui stuff set => display it
@@ -1684,6 +1708,7 @@ void convoi_detail_t::rdwr(loadsave_t *file)
 		w->set_windowsize( size );
 		w->scrolly_maintenance.set_scroll_position( xoff, yoff );
 		w->scrollx_formation.set_scroll_position(formation_xoff, formation_yoff);
+		w->tabstate = selected_tab;
 		w->tabs.set_active_tab_index(selected_tab);
 		w->cont_payload_info.set_cnv(cnv);
 		// we must invalidate halthandle
@@ -1788,8 +1813,8 @@ void gui_convoy_maintenance_info_t::update_list()
 			mon_nominal += world()->calc_adjusted_monthly_figure(desc->get_fixed_cost());
 			mon_actual += world()->calc_adjusted_monthly_figure(desc->get_fixed_cost( world() ));
 		}
-		if (run_nominal) run_percent = ((run_actual - run_nominal) * 100) / run_nominal;
-		if (mon_nominal) mon_percent = ((mon_actual - mon_nominal) * 100) / mon_nominal;
+		if (run_nominal && run_actual > run_nominal) run_percent = ((run_actual - run_nominal) * 100) / run_nominal;
+		if (mon_nominal && mon_actual > mon_nominal) mon_percent = ((mon_actual - mon_nominal) * 100) / mon_nominal;
 
 		if (run_percent || mon_percent) {
 			any_obsoletes = true;

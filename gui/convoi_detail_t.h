@@ -114,7 +114,7 @@ class gui_convoy_spec_table_t : public gui_aligned_container_t
 	cbuffer_t buf;
 
 	// update flag
-	uint32 update_seed=0;
+	uint64 update_seed=0;
 
 	void update();
 
@@ -236,7 +236,7 @@ private:
 	gui_scrollpane_t scrolly_maintenance;
 	gui_scrollpane_t scroll_spec;
 
-	static sint16 tabstate;
+	sint16 tabstate = CD_TAB_MAINTENANCE;
 	gui_tab_panel_t switch_chart;
 	gui_tab_panel_t tabs;
 
@@ -264,7 +264,12 @@ private:
 	sint64 force_curves[SPEED_RECORDS][MAX_FORCE_CURVES];
 	uint8 te_curve_abort_x = SPEED_RECORDS;
 
-	sint64 old_seed = 0; // gui update flag
+	// gui update state
+	bool maintenance_info_dirty = true;
+	bool payload_info_dirty = true;
+	bool physics_chart_dirty = true;
+	sint64 maintenance_seed = 0;
+	sint64 payload_seed = 0;
 
 	void update_labels();
 
@@ -288,8 +293,11 @@ public:
 	 */
 	void update_data() { set_dirty(); }
 
-	// called when fare class was changed
-	void update_cargo_info() { cont_payload_info.update_list(); }
+	// called when fare class or convoy cargo was changed
+	void update_cargo_info() { payload_info_dirty = true; physics_chart_dirty = true; set_dirty(); }
+
+	// called when the convoy composition or livery was changed
+	void update_maintenance_info() { maintenance_info_dirty = true; physics_chart_dirty = true; set_dirty(); }
 
 	void rdwr( loadsave_t *file ) OVERRIDE;
 

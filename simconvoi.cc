@@ -2997,6 +2997,12 @@ DBG_MESSAGE("convoi_t::add_vehicle()","extend array_tpl to %i totals.",max_rail_
 	longest_max_loading_time = calc_longest_max_loading_time();
 	calc_direction_steps();
 
+	// Vehicle composition changes can alter the physics charts.
+	convoi_detail_t *detail = dynamic_cast<convoi_detail_t*>(win_get_magic(magic_convoi_detail + self.get_id()));
+	if (detail) {
+		detail->update_maintenance_info();
+	}
+
 DBG_MESSAGE("convoi_t::add_vehicle()","now %i of %i total vehicles.",vehicle_count,max_vehicle);
 	return true;
 }
@@ -3093,6 +3099,13 @@ void convoi_t::upgrade_vehicle(uint16 i, vehicle_t* v)
 	longest_max_loading_time = calc_longest_max_loading_time();
 	calc_direction_steps();
 
+	// Replacing a vehicle in-place does not change vehicle_count, so the
+	// convoi detail maintenance tab cannot detect it from its normal seed.
+	convoi_detail_t *detail = dynamic_cast<convoi_detail_t*>(win_get_magic(magic_convoi_detail + self.get_id()));
+	if (detail) {
+		detail->update_maintenance_info();
+	}
+
 	delete old_vehicle;
 
 DBG_MESSAGE("convoi_t::upgrade_vehicle()","now %i of %i total vehicles.",i,max_vehicle);
@@ -3166,6 +3179,12 @@ vehicle_t *convoi_t::remove_vehicle_at(uint16 i)
 		calc_direction_steps();
 	}
 
+	// Vehicle composition changes can alter the physics charts.
+	convoi_detail_t *detail = dynamic_cast<convoi_detail_t*>(win_get_magic(magic_convoi_detail + self.get_id()));
+	if (detail) {
+		detail->update_maintenance_info();
+	}
+
 	return v;
 }
 
@@ -3220,8 +3239,13 @@ void convoi_t::check_freight()
 	}
 	calc_loading();
 	freight_info_resort = true;
-}
 
+	// Stale cargo may have been removed without changing the total weight.
+	convoi_detail_t *detail = dynamic_cast<convoi_detail_t*>(win_get_magic(magic_convoi_detail + self.get_id()));
+	if (detail) {
+		detail->update_cargo_info();
+	}
+}
 
 bool convoi_t::set_schedule(schedule_t * sch)
 {
@@ -5261,10 +5285,10 @@ void convoi_t::force_update_fare_related_dialogs()
 	}
 
 	// detail
-	//convoi_detail_t *detail = dynamic_cast<convoi_detail_t*>(win_get_magic(magic_convoi_detail + self.get_id()));
-	//if (detail) {
-	//	detail->update_cargo_info();
-	//}
+	convoi_detail_t *detail = dynamic_cast<convoi_detail_t*>(win_get_magic(magic_convoi_detail + self.get_id()));
+	if (detail) {
+		detail->update_cargo_info();
+	}
 
 	return;
 }
@@ -6043,6 +6067,10 @@ station_tile_search_ready: ;
 	if(changed_loading_level > 0)
 	{
 		freight_info_resort = true;
+		convoi_detail_t *detail = dynamic_cast<convoi_detail_t*>(win_get_magic(magic_convoi_detail + self.get_id()));
+		if (detail) {
+			detail->update_cargo_info();
+		}
 	}
 	if(  changed_loading_level  ) {
 		halt->recalc_status();
@@ -7806,6 +7834,7 @@ void convoi_t::clear_replace()
 		 return;
 	 }
 	 const uint16 date = welt->get_timeline_year_month();
+	 bool changed = false;
 	 for (int i = 0; i < vehicle_count; i++)
 	 {
 		vehicle_t& v = *vehicle[i];
@@ -7813,11 +7842,19 @@ void convoi_t::clear_replace()
 		if(liv)
 		{
 			// Only change the livery if there is an available scheme livery.
-			v.set_current_livery(liv);
+			if (strcmp(v.get_current_livery(), liv) != 0) {
+				v.set_current_livery(liv);
+				changed = true;
+			}
 		}
 	 }
+	if (changed) {
+		convoi_detail_t *detail = dynamic_cast<convoi_detail_t*>(win_get_magic(magic_convoi_detail + self.get_id()));
+		if (detail) {
+			detail->update_maintenance_info();
+		}
+	}
  }
-
  uint16 convoi_t::get_livery_scheme_index() const
  {
 	 if(line.is_bound())
