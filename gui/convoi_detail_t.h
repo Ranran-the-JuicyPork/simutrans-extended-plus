@@ -114,7 +114,7 @@ class gui_convoy_spec_table_t : public gui_aligned_container_t
 	cbuffer_t buf;
 
 	// update flag
-	uint32 update_seed=0;
+	uint64 update_seed=0;
 
 	void update();
 

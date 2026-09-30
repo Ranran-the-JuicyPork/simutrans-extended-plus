@@ -329,7 +329,12 @@ gui_convoy_spec_table_t::gui_convoy_spec_table_t(convoihandle_t c)
 	}
 
 	if( cnv.is_bound() ) {
-		update_seed = cnv->get_vehicle_count() + world()->get_current_month() + cnv->get_current_schedule_order() + spec_table_mode + show_sideview;
+		update_seed =
+			((uint64)cnv->get_vehicle_count() << 56) |
+			((uint64)world()->get_current_month() << 24) |
+			((uint64)cnv->get_current_schedule_order() << 8) |
+			((uint64)spec_table_mode << 1) |
+			(show_sideview ? 1 : 0);
 		update();
 	}
 }
@@ -801,10 +806,7 @@ void gui_convoy_spec_table_t::insert_payload_rows()
 		}
 
 		// Convoy total value
-		if (cnv->get_vehicle_count() == 1) {
-			; // nothing to do
-		}
-		else {
+		if (cnv->get_vehicle_count() > 1) {
 			gui_table_cell_buf_t *td = new_component<gui_table_cell_buf_t>("", SYSCOL_TD_BACKGROUND_SUM, gui_label_t::centered);
 			switch (i) {
 				case SPEC_CATERING:
@@ -842,11 +844,11 @@ void gui_convoy_spec_table_t::insert_payload_rows()
 void gui_convoy_spec_table_t::insert_maintenance_rows()
 {
 	const uint16 month_now = world()->get_timeline_year_month();
-	const bool is_aircraft = cnv->front()->get_waytype() == air_wt;
-	uint32 total; // for calculate convoy total
+	// const bool is_aircraft = cnv->front()->get_waytype() == air_wt;
+	// uint32 total; // for calculate convoy total
 
 	for (uint8 i = SPECS_MAINTENANCE_START; i < SPECS_MAINTENANCE_END; i++) {
-		total = 0;
+		// total = 0;
 
 		new_component<gui_table_header_t>(spec_table_first_col_text[i], SYSCOL_TH_BACKGROUND_LEFT, gui_label_t::left)->set_fixed_width(spec_table_first_col_width);
 		for (uint8 j=0; j < cnv->get_vehicle_count(); j++) {
@@ -954,10 +956,7 @@ void gui_convoy_spec_table_t::insert_maintenance_rows()
 		}
 
 		// Convoy total value
-		if (cnv->get_vehicle_count() == 1) {
-			; // nothing to do
-		}
-		else {
+		if (cnv->get_vehicle_count() > 1) {
 			gui_table_cell_buf_t *td = new_component<gui_table_cell_buf_t>("", SYSCOL_TD_BACKGROUND_SUM, gui_label_t::centered);
 			switch (i) {
 				case SPEC_AGE:
@@ -1035,7 +1034,7 @@ void gui_convoy_spec_table_t::insert_constraints_rows()
 
 			switch (i) {
 				case SPEC_IS_TALL:
-					if( veh_type->get_fixed_cost() ) {
+					if( veh_type->get_is_tall() ) {
 						lb->buf().append("*");
 						lb->set_color(COL_WARNING);
 					}
@@ -1061,10 +1060,7 @@ void gui_convoy_spec_table_t::insert_constraints_rows()
 		}
 
 		// Convoy total value
-		if (cnv->get_vehicle_count() == 1) {
-			; // nothing to do
-		}
-		else {
+		if (cnv->get_vehicle_count() > 1) {
 			gui_table_cell_buf_t *td = new_component<gui_table_cell_buf_t>("", SYSCOL_TD_BACKGROUND_SUM, gui_label_t::centered);
 			switch (i) {
 				case SPEC_IS_TALL:
@@ -1087,7 +1083,12 @@ void gui_convoy_spec_table_t::insert_constraints_rows()
 void gui_convoy_spec_table_t::draw(scr_coord offset)
 {
 	if( cnv.is_bound() ) {
-		const uint32 temp_seed = cnv->get_vehicle_count() + world()->get_current_month() + cnv->get_current_schedule_order() + spec_table_mode + show_sideview;
+		const uint64 temp_seed =
+			((uint64)cnv->get_vehicle_count() << 56) |
+			((uint64)world()->get_current_month() << 24) |
+			((uint64)cnv->get_current_schedule_order() << 8) |
+			((uint64)spec_table_mode << 1) |
+			(show_sideview ? 1 : 0);
 
 		if( temp_seed!=update_seed ) {
 			update_seed = temp_seed;
@@ -1371,6 +1372,9 @@ void convoi_detail_t::set_tab_opened()
 			break;
 		case CD_TAB_PHYSICS_CHARTS:
 			ideal_size_h += container_chart.get_size().h + D_V_SPACE*2;
+			break;
+		case CD_TAB_SPEC_TABLE:
+			ideal_size_h += cont_spec_tab.get_size().h;
 			break;
 	}
 	if (get_windowsize().h != ideal_size_h) {
@@ -1788,8 +1792,8 @@ void gui_convoy_maintenance_info_t::update_list()
 			mon_nominal += world()->calc_adjusted_monthly_figure(desc->get_fixed_cost());
 			mon_actual += world()->calc_adjusted_monthly_figure(desc->get_fixed_cost( world() ));
 		}
-		if (run_nominal) run_percent = ((run_actual - run_nominal) * 100) / run_nominal;
-		if (mon_nominal) mon_percent = ((mon_actual - mon_nominal) * 100) / mon_nominal;
+		if (run_nominal && run_actual > run_nominal) run_percent = ((run_actual - run_nominal) * 100) / run_nominal;
+		if (mon_nominal && mon_actual > mon_nominal) mon_percent = ((mon_actual - mon_nominal) * 100) / mon_nominal;
 
 		if (run_percent || mon_percent) {
 			any_obsoletes = true;
