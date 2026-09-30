@@ -1410,9 +1410,10 @@ void convoi_detail_t::update_labels()
 
 			const sint64 seed_temp = cnv->is_reversed() + cnv->get_vehicle_count() + world()->get_timeline_year_month();
 
-			if (old_seed != seed_temp) {
-				// something has changed => update
-				old_seed = seed_temp;
+			if (maintenance_info_dirty || maintenance_seed != seed_temp) {
+				// Something has changed, or the maintenance display has been explicitly invalidated.
+				maintenance_seed = seed_temp;
+				maintenance_info_dirty = false;
 				cont_maintenance.update_list();
 			}
 			break;
@@ -1435,9 +1436,10 @@ void convoi_detail_t::update_labels()
 			}
 
 			const sint64 seed_temp = cnv->is_reversed() + cnv->get_vehicle_count() + cnv->get_sum_weight() + cb_loaded_detail.get_selection();
-			if (old_seed != seed_temp) {
-				// something has changed => update
-				old_seed = seed_temp;
+			if (payload_info_dirty || payload_seed != seed_temp) {
+				// Something has changed, or the payload display has been explicitly invalidated.
+				payload_seed = seed_temp;
+				payload_info_dirty = false;
 				cont_payload_info.update_list();
 			}
 			break;
