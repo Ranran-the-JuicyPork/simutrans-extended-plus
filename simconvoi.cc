@@ -5273,10 +5273,10 @@ void convoi_t::force_update_fare_related_dialogs()
 	}
 
 	// detail
-	//convoi_detail_t *detail = dynamic_cast<convoi_detail_t*>(win_get_magic(magic_convoi_detail + self.get_id()));
-	//if (detail) {
-	//	detail->update_cargo_info();
-	//}
+	convoi_detail_t *detail = dynamic_cast<convoi_detail_t*>(win_get_magic(magic_convoi_detail + self.get_id()));
+	if (detail) {
+		detail->update_cargo_info();
+	}
 
 	return;
 }
