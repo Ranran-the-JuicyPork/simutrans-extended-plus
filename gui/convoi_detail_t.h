@@ -267,6 +267,7 @@ private:
 	// gui update state
 	bool maintenance_info_dirty = true;
 	bool payload_info_dirty = true;
+	bool physics_chart_dirty = true;
 	sint64 maintenance_seed = 0;
 	sint64 payload_seed = 0;
 
@@ -293,10 +294,10 @@ public:
 	void update_data() { set_dirty(); }
 
 	// called when fare class or convoy cargo was changed
-	void update_cargo_info() { payload_info_dirty = true; set_dirty(); }
+	void update_cargo_info() { payload_info_dirty = true; physics_chart_dirty = true; set_dirty(); }
 
 	// called when the convoy composition or livery was changed
-	void update_maintenance_info() { maintenance_info_dirty = true; set_dirty(); }
+	void update_maintenance_info() { maintenance_info_dirty = true; physics_chart_dirty = true; set_dirty(); }
 
 	void rdwr( loadsave_t *file ) OVERRIDE;
 
