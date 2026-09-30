@@ -113,7 +113,7 @@ public:
 class gui_halt_waiting_indicator_t : public gui_aligned_container_t
 {
 	halthandle_t halt;
-	gui_image_t img_alert;
+	gui_image_t img_alert[3];
 	gui_halt_capacity_bar_t *capacity_bar[3];
 	gui_label_buf_t lb_waiting[3];
 	gui_label_buf_t lb_capacity[3];
@@ -158,7 +158,7 @@ private:
 		bool operator == (const dest_info_t &other) const { return ( this->cnv==other.cnv ); }
 	};
 
-	static bool compare_hi(const dest_info_t &a, const dest_info_t &b) { return a.delta_ticks <= b.delta_ticks; }
+	static bool compare_hi(const dest_info_t &a, const dest_info_t &b) { return a.delta_ticks < b.delta_ticks; }
 
 	vector_tpl<dest_info_t> db_halts;
 
@@ -203,7 +203,7 @@ private:
 	gui_scrollpane_t scroll_freight1, scroll_freight2;
 
 	int pax_ev_num[5], mail_ev_num[2];
-	int old_pax_ev_sum, old_mail_ev_sum;
+	int old_pax_ev_num[5], old_mail_ev_num[2];
 	gui_aligned_container_t cont_pax_ev_detail, cont_mail_ev_detail; // values with symbol
 	gui_bandgraph_t evaluation_pax, evaluation_mail;
 	gui_halt_waiting_indicator_t waiting_bar;

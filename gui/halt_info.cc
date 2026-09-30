@@ -438,11 +438,11 @@ void gui_halt_waiting_indicator_t::init()
 				lb_transfer_time[i].set_fixed_width(L_WAITING_CELL_WIDTH);
 				add_component(&lb_transfer_time[i]);
 			}
-			img_alert.set_image(skinverwaltung_t::alerts ? skinverwaltung_t::alerts->get_image_id(2) : IMG_EMPTY, true);
-			img_alert.set_rigid(true);
-			img_alert.set_tooltip("No service");
-			img_alert.set_visible(false);
-			add_component(&img_alert);
+			img_alert[i].set_image(skinverwaltung_t::alerts ? skinverwaltung_t::alerts->get_image_id(2) : IMG_EMPTY, true);
+			img_alert[i].set_rigid(true);
+			img_alert[i].set_tooltip("No service");
+			img_alert[i].set_visible(false);
+			add_component(&img_alert[i]);
 
 			new_component<gui_fill_t>();
 		}
@@ -535,9 +535,7 @@ void gui_halt_waiting_indicator_t::draw(scr_coord offset)
 			lb_transfer_time[i].update();
 			lb_transfer_time[i].set_color(is_operating ? SYSCOL_TEXT : SYSCOL_TEXT_INACTIVE);
 
-			if (!is_operating && skinverwaltung_t::alerts) {
-				img_alert.set_visible(true);
-			}
+			img_alert[i].set_visible(!is_operating && skinverwaltung_t::alerts);
 		}
 	}
 	set_size(get_size());
@@ -564,8 +562,12 @@ halt_info_t::halt_info_t(halthandle_t halt) :
 void halt_info_t::init(halthandle_t halt)
 {
 	this->halt = halt;
-	old_pax_ev_sum = -1;
-	old_mail_ev_sum = -1;
+	for (uint8 i = 0; i < 5; i++) {
+		old_pax_ev_num[i] = -1;
+	}
+	for (uint8 i = 0; i < 2; i++) {
+		old_mail_ev_num[i] = -1;
+	}
 	if(halt->get_station_type() & haltestelle_t::airstop && halt->has_no_control_tower())
 	{
 		sprintf(edit_name, "%s [%s]", halt->get_name(), translator::translate("NO CONTROL TOWER"));
@@ -1093,8 +1095,14 @@ void halt_info_t::update_components()
 			}
 			else {
 				// There are users
-				if (old_pax_ev_sum != pax_sum) {
-					old_pax_ev_sum = pax_sum;
+				bool evaluation_changed = false;
+				for (uint8 i = 0; i < PAX_EVALUATIONS; i++) {
+					if (old_pax_ev_num[i] != pax_ev_num[i]) {
+						evaluation_changed = true;
+						old_pax_ev_num[i] = pax_ev_num[i];
+					}
+				}
+				if (evaluation_changed) {
 					uint8 indicator_height = D_INDICATOR_HEIGHT-1;
 					if (pax_sum > 255) { indicator_height++; }
 					if (pax_sum > 999) { indicator_height++; }
@@ -1167,8 +1175,10 @@ void halt_info_t::update_components()
 			}
 			else {
 				// There are users
-				if (old_mail_ev_sum != mail_sum) {
-					old_mail_ev_sum = mail_sum;
+				const bool evaluation_changed = old_mail_ev_num[0] != mail_ev_num[0] || old_mail_ev_num[1] != mail_ev_num[1];
+				if (evaluation_changed) {
+					old_mail_ev_num[0] = mail_ev_num[0];
+					old_mail_ev_num[1] = mail_ev_num[1];
 					uint8 indicator_height = D_INDICATOR_HEIGHT-1;
 					if (mail_sum > 255) { indicator_height++; }
 					if (mail_sum > 999) { indicator_height++; }
