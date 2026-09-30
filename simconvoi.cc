@@ -2997,6 +2997,12 @@ DBG_MESSAGE("convoi_t::add_vehicle()","extend array_tpl to %i totals.",max_rail_
 	longest_max_loading_time = calc_longest_max_loading_time();
 	calc_direction_steps();
 
+	// Vehicle composition changes can alter the physics charts.
+	convoi_detail_t *detail = dynamic_cast<convoi_detail_t*>(win_get_magic(magic_convoi_detail + self.get_id()));
+	if (detail) {
+		detail->update_maintenance_info();
+	}
+
 DBG_MESSAGE("convoi_t::add_vehicle()","now %i of %i total vehicles.",vehicle_count,max_vehicle);
 	return true;
 }
@@ -3171,6 +3177,12 @@ vehicle_t *convoi_t::remove_vehicle_at(uint16 i)
 	if(!vehicle.empty() && vehicle[0])
 	{
 		calc_direction_steps();
+	}
+
+	// Vehicle composition changes can alter the physics charts.
+	convoi_detail_t *detail = dynamic_cast<convoi_detail_t*>(win_get_magic(magic_convoi_detail + self.get_id()));
+	if (detail) {
+		detail->update_maintenance_info();
 	}
 
 	return v;
