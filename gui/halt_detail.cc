@@ -472,9 +472,12 @@ void halt_detail_t::update_components()
 		if (goods_manager_t::get_info_catg_index(selected_route_catg_index)->get_number_of_classes()>1) {
 			lb_selected_route_catg.buf().printf(" > %s", goods_manager_t::get_translated_fare_class_name(selected_route_catg_index, selected_class));
 		}
-		destinations.build_halt_list(selected_route_catg_index, selected_class, list_by_station);
 		lb_selected_route_catg.update();
 	}
+	destinations.build_halt_list(
+		list_by_station ? goods_manager_t::INDEX_NONE : selected_route_catg_index,
+		list_by_station ? 0 : selected_class,
+		list_by_station);
 	destinations.recalc_size();
 	cont_desinations.set_size(scr_size(max(get_windowsize().w, destinations.get_size().w), destinations.get_pos().y + destinations.get_size().h));
 
@@ -1413,12 +1416,64 @@ gui_halt_route_info_t::gui_halt_route_info_t(const halthandle_t & halt, uint8 ca
 }
 
 
+bool gui_halt_route_info_t::is_halt_list_current(uint8 catg_index, uint8 g_class, bool station_mode) const
+{
+	if (!halt_list_cache_valid || catg_index != cached_route_catg_index || g_class != cached_class || station_mode != cached_station_display_mode) {
+		return false;
+	}
+
+	uint32 source_index = 0;
+	const auto matches_connections = [&](const haltestelle_t::connexions_map* connexions) {
+		for (const auto& iter : *connexions) {
+			if (iter.key.is_bound()) {
+				if (source_index >= cached_connected_halts.get_count() || !(cached_connected_halts[source_index] == iter.key)) {
+					return false;
+				}
+				source_index++;
+			}
+		}
+		return true;
+	};
+
+	if (station_mode) {
+		if (!halt.is_bound()) {
+			return cached_connected_halts.empty();
+		}
+		for (uint8 i = 0; i < goods_manager_t::get_max_catg_index(); i++) {
+			haltestelle_t::connexions_map* connexions = halt->get_connexions(i, goods_manager_t::get_classes_catg_index(i) - 1);
+			if (!matches_connections(connexions)) {
+				return false;
+			}
+		}
+	}
+	else if (!halt.is_bound() || catg_index == goods_manager_t::INDEX_NONE ||
+		catg_index >= goods_manager_t::get_max_catg_index() || !halt->is_enabled(catg_index)) {
+		return cached_connected_halts.empty();
+	}
+	else if (!matches_connections(halt->get_connexions(catg_index, selected_class))) {
+		return false;
+	}
+
+	return source_index == cached_connected_halts.get_count();
+}
+
+
 void gui_halt_route_info_t::build_halt_list(uint8 catg_index, uint8 g_class, bool station_mode)
 {
+	if (is_halt_list_current(catg_index, g_class, station_mode)) {
+		return;
+	}
+
 	halt_list.clear();
+	cached_connected_halts.clear();
 	station_display_mode = station_mode;
+	cached_route_catg_index = catg_index;
+	cached_class = g_class;
+	cached_station_display_mode = station_mode;
+	halt_list_cache_valid = true;
+
 	if (!halt.is_bound() ||
-		(!station_display_mode && (!halt->is_enabled(catg_index) || catg_index == goods_manager_t::INDEX_NONE || catg_index >= goods_manager_t::get_max_catg_index()))) {
+		(!station_display_mode && (catg_index == goods_manager_t::INDEX_NONE || catg_index >= goods_manager_t::get_max_catg_index() || !halt->is_enabled(catg_index)))) {
 		return;
 	}
 
@@ -1430,6 +1485,7 @@ void gui_halt_route_info_t::build_halt_list(uint8 catg_index, uint8 g_class, boo
 				for(auto &iter : *connexions) {
 					halthandle_t a_halt = iter.key;
 					if (a_halt.is_bound()) {
+						cached_connected_halts.append(a_halt);
 						halt_list.insert_unique_ordered(a_halt, RelativeDistanceOrdering(halt->get_basis_pos()));
 					}
 				}
@@ -1456,6 +1512,7 @@ void gui_halt_route_info_t::build_halt_list(uint8 catg_index, uint8 g_class, boo
 			for(auto &iter : *connexions) {
 				halthandle_t a_halt = iter.key;
 				if (a_halt.is_bound()) {
+					cached_connected_halts.append(a_halt);
 					halt_list.insert_unique_ordered(a_halt, RelativeDistanceOrdering(halt->get_basis_pos()));
 				}
 			}
@@ -1517,8 +1574,6 @@ void gui_halt_route_info_t::recalc_size()
 
 void gui_halt_route_info_t::draw(scr_coord offset)
 {
-	build_halt_list(selected_route_catg_index, selected_class, station_display_mode);
-
 	if (station_display_mode) {
 		draw_list_by_dest(offset);
 	}
