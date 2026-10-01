@@ -610,6 +610,21 @@ void private_car_t::rdwr(loadsave_t *file)
 		pos_next_next.rdwr(file);
 	}
 
+	if(file->is_loading()) {
+		const grund_t* next_gr = welt->lookup(pos_next);
+		if(next_gr == NULL || next_gr->get_weg(road_wt) == NULL) {
+			dbg->warning("private_car_t::rdwr()", "Loaded private car has no road at pos_next %s; destroying it", pos_next.get_str());
+			time_to_life = 0;
+		}
+		if(pos_next_next != koord3d::invalid) {
+			const grund_t* next_next_gr = welt->lookup(pos_next_next);
+			if(next_next_gr == NULL || next_next_gr->get_weg(road_wt) == NULL) {
+				dbg->warning("private_car_t::rdwr()", "Loaded private car has invalid/non-road pos_next_next %s; invalidating next destination", pos_next_next.get_str());
+				pos_next_next = koord3d::invalid;
+			}
+		}
+	}
+
 	// overtaking status
 	if(file->is_version_less(100, 1)) {
 		set_tiles_overtaking( 0 );
@@ -661,6 +676,7 @@ bool private_car_t::can_enter_tile(grund_t *gr)
 	// road still there?
 	strasse_t * str = (strasse_t*)gr->get_weg(road_wt);
 	if(str==NULL) {
+		dbg->warning("private_car_t::can_enter_tile()", "Attempted to enter a ground without a road at %s", gr->get_pos().get_str());
 		time_to_life = 0;
 		return false;
 	}
@@ -986,7 +1002,13 @@ void private_car_t::enter_tile(grund_t* gr)
 		pedestrian_t::generate_pedestrians_at(get_pos(), number, 6000);
 	}
 	vehicle_base_t::enter_tile(gr);
-	get_weg()->book(1, WAY_STAT_CONVOIS);
+	weg_t* const entered_way = get_weg();
+	if(entered_way == NULL) {
+		dbg->warning("private_car_t::enter_tile()", "Vehicle entered %s but no road was installed on the vehicle", gr->get_pos().get_str());
+		time_to_life = 0;
+		return;
+	}
+	entered_way->book(1, WAY_STAT_CONVOIS);
 }
 
 
@@ -1004,6 +1026,7 @@ grund_t* private_car_t::hop_check()
 	grund_t *const from = welt->lookup(pos_next);
 	if(from==NULL) {
 		// nothing to go? => destroy ...
+		dbg->warning("private_car_t::hop_check()", "Next position %s does not exist; destroying private car", pos_next.get_str());
 		time_to_life = 0;
 		return NULL;
 	}
@@ -1012,6 +1035,7 @@ grund_t* private_car_t::hop_check()
 	const weg_t *weg = from->get_weg(road_wt);
 	if(weg==NULL) {
 		// nothing to go? => destroy ...
+		dbg->warning("private_car_t::hop_check()", "Next position %s exists but has no road; destroying private car", pos_next.get_str());
 		time_to_life = 0;
 		return NULL;
 	}
@@ -1102,6 +1126,7 @@ grund_t* private_car_t::hop_check()
 			const weg_t* next_way = next_gr ? next_gr->get_weg(road_wt) : NULL;
 			if (!next_way)
 			{
+				dbg->warning("private_car_t::hop_check()", "Private car route points to a missing/non-road tile %s; falling back to heuristic routing", pos_next_next.get_str());
 				pos_next_next = koord3d::invalid;
 
 				// We also need to invalidate the route.
