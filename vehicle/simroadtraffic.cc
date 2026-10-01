@@ -1207,6 +1207,11 @@ grund_t* private_car_t::hop_check()
 					{
 						// check, if this is just a single tile deep after a crossing
 						weg_t* w = to->get_weg(road_wt);
+						if (w == NULL) {
+							dbg->warning("private_car_t::hop_check()", "Neighbour at %s has no road", to->get_pos().get_str());
+							ribi &= ~ribi_t::nesw[r];
+							continue;
+						}
 						if (ribi_t::is_single(w->get_ribi()) && (w->get_ribi() & ribi_t::nesw[r]) == 0 && !ribi_t::is_single(ribi))
 						{
 							ribi &= ~ribi_t::nesw[r];
@@ -1215,12 +1220,17 @@ grund_t* private_car_t::hop_check()
 						// check, if roadsign forbid next step ...
 						if (w->has_sign()) {
 							const roadsign_t* rs = to->find<roadsign_t>();
-							const roadsign_desc_t* rs_desc = rs->get_desc();
-							if (rs_desc->get_min_speed() > desc->get_topspeed() || (rs_desc->is_private_way() && (rs->get_player_mask() & 2) == 0))
-							{
-								// not allowed to go here
-								ribi &= ~ribi_t::nesw[r];
-								continue;
+							if (rs == NULL || rs->get_desc() == NULL) {
+								dbg->warning("private_car_t::hop_check()", "Road at %s reports a sign but the sign object or descriptor is missing", to->get_pos().get_str());
+							}
+							else {
+								const roadsign_desc_t* rs_desc = rs->get_desc();
+								if (rs_desc->get_min_speed() > desc->get_topspeed() || (rs_desc->is_private_way() && (rs->get_player_mask() & 2) == 0))
+								{
+									// not allowed to go here
+									ribi &= ~ribi_t::nesw[r];
+									continue;
+								}
 							}
 						}
 
