@@ -506,8 +506,14 @@ bool gui_theme_t::themes_init(const char *file_name, bool init_fonts, bool init_
 	gui_theme_t::gui_checkbox_size.w = (uint32)contents.get_int("gui_checkbox_width",  gui_theme_t::gui_checkbox_size.w );
 	gui_theme_t::gui_checkbox_size.h = (uint32)contents.get_int("gui_checkbox_height", gui_theme_t::gui_checkbox_size.h );
 
-	gui_theme_t::gui_radio_button_size.w = (uint32)contents.get_int("gui_radiobutton_width",  gui_theme_t::gui_radio_button_size.w);
-	gui_theme_t::gui_radio_button_size.h = (uint32)contents.get_int("gui_radiobutton_height", gui_theme_t::gui_radio_button_size.h);
+	if( skinverwaltung_t::radio_button ) {
+		gui_theme_t::gui_radio_button_size.w = (uint32)contents.get_int("gui_radiobutton_width",  gui_theme_t::gui_radio_button_size.w);
+		gui_theme_t::gui_radio_button_size.h = (uint32)contents.get_int("gui_radiobutton_height", gui_theme_t::gui_radio_button_size.h);
+	}
+	else {
+		// Keep radio buttons compatible with themes which do not provide a radio-button skin.
+		gui_theme_t::gui_radio_button_size = gui_theme_t::gui_checkbox_size;
+	}
 
 	gui_theme_t::gui_gadget_size.w = (uint32)contents.get_int("gui_gadget_width",  gui_theme_t::gui_gadget_size.w );
 	gui_theme_t::gui_gadget_size.h = (uint32)contents.get_int("gui_gadget_height", gui_theme_t::gui_gadget_size.h );
