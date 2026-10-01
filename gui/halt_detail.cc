@@ -914,6 +914,9 @@ void gui_halt_nearby_factory_info_t::draw(scr_coord offset)
 	static cbuffer_t buf;
 	int xoff = pos.x;
 	int yoff = pos.y;
+	required_material.clear();
+	active_product.clear();
+	inactive_product.clear();
 
 	const slist_tpl<fabrik_t*> & fab_list = halt->get_fab_list();
 
@@ -961,14 +964,15 @@ void gui_halt_nearby_factory_info_t::draw(scr_coord offset)
 			display_colorbox_with_tooltip(offset.x + xoff, offset.y + yoff + GOODS_COLOR_BOX_YOFF, GOODS_COLOR_BOX_HEIGHT, GOODS_COLOR_BOX_HEIGHT, ware->get_color(), true, translator::translate(ware->get_name()));
 			xoff += D_FIXED_SYMBOL_WIDTH;
 
-			if (!active_product.is_contained(ware)) {
-				if ((fab->get_status() % fabrik_t::no_material || fab->get_status() % fabrik_t::material_shortage) && !i.menge) {
-					// this factory is not in operation
+			if ((fab->get_status() % fabrik_t::no_material || fab->get_status() % fabrik_t::material_shortage) && !i.menge) {
+				// this factory is not in operation
+				if (!active_product.is_contained(ware)) {
 					inactive_product.append_unique(ware);
 				}
-				else {
-					active_product.append(ware);
-				}
+			}
+			else {
+				active_product.append_unique(ware);
+				inactive_product.remove(ware);
 			}
 			has_input_output++;
 		}
