@@ -1057,6 +1057,10 @@ void gui_halt_nearby_factory_info_t::draw(scr_coord offset)
 
 bool gui_halt_nearby_factory_info_t::infowin_event(const event_t * ev)
 {
+	if (!halt.is_bound()) {
+		return false;
+	}
+
 	const unsigned int line = (ev->click_pos.y) / (LINESPACE + 1);
 	line_selected = 0xFFFFFFFFu;
 	if (line >= halt->get_fab_list().get_count()) {
@@ -1064,12 +1068,10 @@ bool gui_halt_nearby_factory_info_t::infowin_event(const event_t * ev)
 	}
 
 	fabrik_t * fab = halt->get_fab_list().at(line);
-	const koord3d fab_pos = fab->get_pos();
-
 	if (!fab) {
-		welt->get_viewport()->change_world_position(fab_pos);
 		return false;
 	}
+	const koord3d fab_pos = fab->get_pos();
 
 	if (IS_LEFTRELEASE(ev)) {
 		if (ev->click_pos.x > 0 && ev->click_pos.x < 15) {
@@ -1465,19 +1467,22 @@ void gui_halt_route_info_t::build_halt_list(uint8 catg_index, uint8 g_class, boo
 
 bool gui_halt_route_info_t::infowin_event(const event_t * ev)
 {
+	if (!halt.is_bound()) {
+		return false;
+	}
+
 	if (!station_display_mode) {
 		const unsigned int line = (ev->click_pos.y) / (LINESPACE + 1);
 		line_selected = 0xFFFFFFFFu;
 		if (line >= halt_list.get_count()) {
 			return false;
 		}
-
 		halthandle_t halt = halt_list[line];
-		const koord3d halt_pos = halt->get_basis_pos3d();
+		halthandle_t halt = halt_list[line];
 		if (!halt.is_bound()) {
-			welt->get_viewport()->change_world_position(halt_pos);
 			return false;
 		}
+		const koord3d halt_pos = halt->get_basis_pos3d();
 
 		if (IS_LEFTRELEASE(ev)) {
 			if (ev->click_pos.x > 0 && ev->click_pos.x < 15) {
