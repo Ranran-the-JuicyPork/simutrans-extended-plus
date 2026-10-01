@@ -81,7 +81,6 @@ void button_t::set_typ(enum type t)
 	switch (type&TYPE_MASK) {
 
 		case square:
-		case radio:
 			text_color = SYSCOL_CHECKBOX_TEXT;
 			if(  !strempty(translated_text)  ) {
 				set_text(translated_text);
@@ -89,6 +88,17 @@ void button_t::set_typ(enum type t)
 			}
 			else {
 				set_size( scr_size( gui_theme_t::gui_checkbox_size.w, max(gui_theme_t::gui_checkbox_size.h,LINESPACE)) );
+			}
+			break;
+
+		case radio:
+			text_color = SYSCOL_CHECKBOX_TEXT;
+			if(  !strempty(translated_text)  ) {
+				set_text(translated_text);
+				set_size( scr_size( gui_theme_t::gui_radio_button_size.w + D_H_SPACE + proportional_string_width( translated_text ), max(gui_theme_t::gui_radio_button_size.h,LINESPACE)) );
+			}
+			else {
+				set_size( scr_size( gui_theme_t::gui_radio_button_size.w, max(gui_theme_t::gui_radio_button_size.h,LINESPACE)) );
 			}
 			break;
 
@@ -191,10 +201,13 @@ scr_size button_t::get_min_size() const
 		case arrowdown:
 			return gui_theme_t::gui_arrow_down_size;
 
-		case square:
-		case radio:	{
+		case square: {
 			scr_coord_val w = translated_text ?  D_H_SPACE + proportional_string_width( translated_text ) : 0;
 			return scr_size(w + gui_theme_t::gui_checkbox_size.w, max(gui_theme_t::gui_checkbox_size.h,LINESPACE));
+		}
+		case radio: {
+			scr_coord_val w = translated_text ?  D_H_SPACE + proportional_string_width( translated_text ) : 0;
+			return scr_size(w + gui_theme_t::gui_radio_button_size.w, max(gui_theme_t::gui_radio_button_size.h,LINESPACE));
 		}
 		case box:
 		case roundbox:
@@ -237,8 +250,11 @@ void button_t::set_text(const char * text)
 	this->text = text;
 	translated_text = b_no_translate ? text : translator::translate(text);
 
-	if(  ( (type & TYPE_MASK) == square  ||  (type & TYPE_MASK) == radio )  &&  !strempty(translated_text)  ) {
+	if(  (type & TYPE_MASK) == square  &&  !strempty(translated_text)  ) {
 		set_size( scr_size( gui_theme_t::gui_checkbox_size.w + D_H_SPACE + proportional_string_width( translated_text ), max(gui_theme_t::gui_checkbox_size.h, LINESPACE)) );
+	}
+	else if(  (type & TYPE_MASK) == radio  &&  !strempty(translated_text)  ) {
+		set_size( scr_size( gui_theme_t::gui_radio_button_size.w + D_H_SPACE + proportional_string_width( translated_text ), max(gui_theme_t::gui_radio_button_size.h, LINESPACE)) );
 	}
 }
 
@@ -477,12 +493,14 @@ void button_t::draw(scr_coord offset)
 				if(  text  ) {
 					text_color = b_enabled ? this->text_color : SYSCOL_CHECKBOX_TEXT_DISABLED;
 					scr_rect area_text = area;
-					area_text.x += gui_theme_t::gui_checkbox_size.w + D_H_SPACE;
-					area_text.w -= gui_theme_t::gui_checkbox_size.w + D_H_SPACE;
+					const scr_size indicator_size = (type&TYPE_MASK)==radio ? gui_theme_t::gui_radio_button_size : gui_theme_t::gui_checkbox_size;
+					area_text.x += indicator_size.w + D_H_SPACE;
+					area_text.w -= indicator_size.w + D_H_SPACE;
 					display_proportional_ellipsis_rgb( area_text, translated_text, ALIGN_LEFT | ALIGN_CENTER_V | DT_CLIP, text_color, true );
 				}
 				if(  win_get_focus() == this  ) {
-					draw_focus_rect( scr_rect( area.get_pos()+scr_coord(0,(area.get_size().h-gui_theme_t::gui_checkbox_size.w)/2), gui_theme_t::gui_checkbox_size ) );
+					const scr_size indicator_size = (type&TYPE_MASK)==radio ? gui_theme_t::gui_radio_button_size : gui_theme_t::gui_checkbox_size;
+					draw_focus_rect( scr_rect( area.get_pos()+scr_coord(0,(area.get_size().h-indicator_size.h)/2), indicator_size ) );
 				}
 			}
 			break;
