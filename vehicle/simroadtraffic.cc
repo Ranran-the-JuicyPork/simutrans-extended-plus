@@ -1000,22 +1000,30 @@ grund_t* private_car_t::hop_check()
 
 	if(  weg->has_sign()  ) {
 		const roadsign_t* rs = from->find<roadsign_t>();
-		const roadsign_desc_t* rs_desc = rs->get_desc();
-		if(  rs_desc->is_traffic_light()  &&  (rs->get_dir()&direction90)==0  ) {
-			// red traffic light, but we go on, if we are already on a traffic light
-			bool go_on = false;
-			if(  const grund_t *gr_current = welt->lookup(get_pos())  ) {
-				if(  const roadsign_t *rs = gr_current->find<roadsign_t>()  ) {
-					go_on = rs  &&  rs->get_desc()->is_traffic_light()  &&  !from->ist_uebergang();
+		if(rs == NULL) {
+			dbg->warning("private_car_t::hop_check()", "Road reports a sign but no road sign object exists at %s", from->get_pos().get_str());
+		}
+		else if(rs->get_desc() == NULL) {
+			dbg->warning("private_car_t::hop_check()", "Road sign at %s has no descriptor", from->get_pos().get_str());
+		}
+		else {
+			const roadsign_desc_t* rs_desc = rs->get_desc();
+			if(  rs_desc->is_traffic_light()  &&  (rs->get_dir()&direction90)==0  ) {
+				// red traffic light, but we go on, if we are already on a traffic light
+				bool go_on = false;
+				if(  const grund_t *gr_current = welt->lookup(get_pos())  ) {
+					if(  const roadsign_t *current_rs = gr_current->find<roadsign_t>()  ) {
+						go_on = current_rs && current_rs->get_desc() && current_rs->get_desc()->is_traffic_light() && !from->ist_uebergang();
+					}
 				}
-			}
-			if(  !go_on   ) {
-				direction = direction90;
-				calc_image();
-				// wait here
-				current_speed = 48;
-				weg_next = 0;
-				return NULL;
+				if(  !go_on   ) {
+					direction = direction90;
+					calc_image();
+					// wait here
+					current_speed = 48;
+					weg_next = 0;
+					return NULL;
+				}
 			}
 		}
 	}
