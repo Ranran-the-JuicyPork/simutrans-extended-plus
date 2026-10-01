@@ -1535,7 +1535,6 @@ bool gui_halt_route_info_t::infowin_event(const event_t * ev)
 			return false;
 		}
 		halthandle_t halt = halt_list[line];
-		halthandle_t halt = halt_list[line];
 		if (!halt.is_bound()) {
 			return false;
 		}
