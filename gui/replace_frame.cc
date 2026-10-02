@@ -571,6 +571,7 @@ bool replace_frame_t::replace_convoy(convoihandle_t cnv_rpl, bool mark)
 		return false;
 	}
 
+	bool replacement_issued = false;
 	switch (state)
 	{
 	case state_replace:
@@ -596,6 +597,7 @@ bool replace_frame_t::replace_convoy(convoihandle_t cnv_rpl, bool mark)
 			rpl->sprintf_replace(buf);
 
 			cnv_rpl->call_convoi_tool('R', buf);
+			replacement_issued = true;
 		}
 
 		else
@@ -603,6 +605,7 @@ bool replace_frame_t::replace_convoy(convoihandle_t cnv_rpl, bool mark)
 			cbuffer_t buf;
 			buf.append((long)master_convoy.get_id());
 			cnv_rpl->call_convoi_tool('C', buf);
+			replacement_issued = true;
 		}
 
 		if(!mark && depot && !rpl->get_autostart())
@@ -620,7 +623,7 @@ bool replace_frame_t::replace_convoy(convoihandle_t cnv_rpl, bool mark)
 	break;
 	}
 
-	return state == state_replace;
+	return replacement_issued;
 }
 
 
