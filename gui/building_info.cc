@@ -398,6 +398,7 @@ building_info_t::building_info_t(gebaeude_t* gb, player_t* owner) :
 				td->buf().append((double)radius / 1000.0, digit);
 				td->buf().append("km ");
 			}
+			td->set_flexible(true, false);
 			td->update();
 			cont_signalbox_info.new_component<gui_fill_t>();
 		}
