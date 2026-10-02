@@ -21,7 +21,7 @@ class gui_waytype_image_box_t :
 {
 private:
 	PIXVAL bgcol = 0;
-	bool flexible;
+	bool flexible = false;
 
 public:
 	gui_waytype_image_box_t(waytype_t wt=invalid_wt, bool flexible=false);
@@ -40,7 +40,7 @@ public:
  */
 class gui_waytype_button_t : public button_t
 {
-	waytype_t wt;
+	waytype_t wt = invalid_wt;
 
 public:
 	gui_waytype_button_t(waytype_t wt_ = invalid_wt) : button_t() {
