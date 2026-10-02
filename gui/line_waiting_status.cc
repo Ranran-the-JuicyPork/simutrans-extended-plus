@@ -91,7 +91,7 @@ void gui_line_convoy_location_t::check_convoy()
 			halthandle_t halt = haltestelle_t::get_halt(check_pos, player);
 
 			if (cnv->get_reverse_schedule()) {
-				cnv_section_at = (cnv_section_at-1) % entries;
+				cnv_section_at = cnv_section_at == 0 ? entries - 1 : cnv_section_at - 1;
 			}
 			if (halt.is_bound()) {
 				break;
