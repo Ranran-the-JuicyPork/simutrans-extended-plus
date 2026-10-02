@@ -2315,6 +2315,15 @@ void minimap_t::rdwr(loadsave_t *file)
 	file->rdwr_short(zoom_out);
 	file->rdwr_short(zoom_in);
 	file->rdwr_bool(isometric);
+
+	if (file->is_loading()) {
+		const int max_zoom_in = min(INT_MAX / (2 * world->get_size_max()), 16);
+		if (zoom_out < 1 || zoom_out > 16 || zoom_in < 1 || zoom_in > max_zoom_in || (zoom_out > 1 && zoom_in > 1)) {
+			dbg->warning("minimap_t::rdwr()", "Invalid minimap zoom factors %i:%i; resetting to 1:1", zoom_in, zoom_out);
+			zoom_out = 1;
+			zoom_in = 1;
+		}
+	}
 }
 
 
