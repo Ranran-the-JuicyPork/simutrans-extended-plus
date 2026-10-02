@@ -495,21 +495,26 @@ bool savegame_frame_t::action_triggered(gui_action_creator_t *component, value_t
 	if(component==&input  ||  component==&savebutton) {
 		// Save/Load Button or Enter-Key pressed
 		//---------------------------------------
-		if(strstart(ibuf, "net:")) {
-			tstrncpy(buf, ibuf, lengthof(buf));
+		const bool is_network_path = strstart(ibuf, "net:");
+		const char *prefix = !is_network_path && searchpath_defined ? searchpath.c_str() : "";
+		const char *extension = !is_network_path && suffix ? suffix : "";
+		const size_t prefix_length = strlen(prefix);
+		const size_t input_length = strlen(ibuf);
+		const size_t extension_length = strlen(extension);
+		const size_t max_length = sizeof(buf) - 1;
+
+		if (prefix_length > max_length ||
+			input_length > max_length - prefix_length ||
+			extension_length > max_length - prefix_length - input_length) {
+			dbg->warning("savegame_frame_t::action_triggered", "Filename is too long");
+			return true;
 		}
-		else {
-			if(searchpath_defined) {
-				tstrncpy(buf, searchpath.c_str(), lengthof(buf));
-			}
-			else {
-				buf[0] = 0;
-			}
-			strcat(buf, ibuf);
-			if(suffix) {
-				strcat(buf, suffix);
-			}
-		}
+
+		memcpy(buf, prefix, prefix_length);
+		memcpy(buf + prefix_length, ibuf, input_length);
+		memcpy(buf + prefix_length + input_length, extension, extension_length);
+		buf[prefix_length + input_length + extension_length] = '\0';
+
 		ok_action(buf);
 		destroy_win(this);
 
