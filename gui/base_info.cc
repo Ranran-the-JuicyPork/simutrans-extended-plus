@@ -46,9 +46,7 @@ public:
 			add_component(embedded);
 			textarea->set_reserved_area( embedded->get_size() + scr_size(D_H_SPACE,D_V_SPACE) );
 			// align right
-			if (embedded) {
-				embedded->set_pos( scr_coord( size.w - embedded->get_size().w, 0) );
-			}
+			embedded->set_pos( scr_coord( size.w - embedded->get_size().w, 0) );
 		}
 		else {
 			textarea->set_reserved_area( scr_size(0,0) );
