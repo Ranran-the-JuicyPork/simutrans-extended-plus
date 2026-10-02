@@ -15,6 +15,70 @@
 #include "../vehicle/vehicle.h"  // get_route_index
 #include "../display/viewport.h" // change_world_position
 
+namespace
+{
+	struct convoy_section_t
+	{
+		convoihandle_t convoy;
+		uint8 section;
+
+		convoy_section_t() : section(0) {}
+		convoy_section_t(convoihandle_t convoy_, uint8 section_) : convoy(convoy_), section(section_) {}
+	};
+
+	vector_tpl<convoy_section_t> convoy_sections;
+	linehandle_t convoy_sections_line;
+	bool convoy_sections_valid = false;
+
+	void invalidate_convoy_sections()
+	{
+		convoy_sections_valid = false;
+	}
+
+	void update_convoy_sections(linehandle_t line)
+	{
+		if (convoy_sections_valid && convoy_sections_line == line) {
+			return;
+		}
+
+		convoy_sections.clear();
+		convoy_sections_line = line;
+		convoy_sections_valid = true;
+		for (uint32 icnv = 0; icnv < line->count_convoys(); icnv++) {
+			convoihandle_t cnv = line->get_convoy(icnv);
+			if (cnv->get_route()->get_count() == cnv->front()->get_route_index()) {
+				continue;
+			}
+
+			uint8 cnv_section_at = cnv->get_schedule()->get_current_stop();
+			const uint8 entries = line->get_schedule()->entries.get_count();
+			const player_t *player = line->get_owner();
+			for (uint8 i = 0; i < entries; i++) {
+				if (cnv->get_reverse_schedule()) {
+					cnv_section_at = (cnv->get_schedule()->get_current_stop() + i + 1) % entries;
+				}
+				else {
+					cnv_section_at = (entries + cnv->get_schedule()->get_current_stop() - 1 - i) % entries;
+				}
+				const koord3d check_pos = line->get_schedule()->entries[cnv_section_at].pos;
+				halthandle_t halt = haltestelle_t::get_halt(check_pos, player);
+
+				if (cnv->get_reverse_schedule()) {
+					cnv_section_at = cnv_section_at == 0 ? entries - 1 : cnv_section_at - 1;
+				}
+				if (halt.is_bound()) {
+					break;
+				}
+				else if (cnv->front()->get_route_index() > cnv->get_route()->index_of(check_pos)) {
+					break; // convoy is in this section
+				}
+			}
+
+			convoy_sections.append(convoy_section_t(cnv, cnv_section_at));
+		}
+	}
+}
+
 gui_convoy_access_arrow_t::gui_convoy_access_arrow_t(convoihandle_t cnv_)
 {
 	cnv = cnv_;
@@ -69,52 +133,20 @@ bool gui_convoy_access_arrow_t::infowin_event(const event_t * ev)
 
 void gui_line_convoy_location_t::check_convoy()
 {
-	vector_tpl<convoihandle_t> located_convoys;
-	for (uint32 icnv = 0; icnv < line->count_convoys(); icnv++){
-		convoihandle_t cnv = line->get_convoy(icnv);
-		if( cnv->get_route()->get_count() == cnv->front()->get_route_index() ) {
-			// stopping at the stop...
-			continue;
-		}
-
-		uint8 cnv_section_at = cnv->get_schedule()->get_current_stop();
-		const uint8 entries= line->get_schedule()->entries.get_count();
-		const player_t *player = line->get_owner();
-		for (uint8 i = 0; i< entries; i++) {
-			if (cnv->get_reverse_schedule()) {
-				cnv_section_at = (cnv->get_schedule()->get_current_stop()+i+1) % entries;
-			}
-			else {
-				cnv_section_at = (entries+cnv->get_schedule()->get_current_stop()-1-i) % entries;
-			}
-			const koord3d check_pos = line->get_schedule()->entries[cnv_section_at].pos;
-			halthandle_t halt = haltestelle_t::get_halt(check_pos, player);
-
-			if (cnv->get_reverse_schedule()) {
-				cnv_section_at = cnv_section_at == 0 ? entries - 1 : cnv_section_at - 1;
-			}
-			if (halt.is_bound()) {
-				break;
-			}
-			else {
-				if (!cnv->get_reverse_schedule() && cnv->front()->get_route_index() > cnv->get_route()->index_of(check_pos)) {
-					break; // convoy is in this section
-				}
-				else if (cnv->get_reverse_schedule() && cnv->front()->get_route_index() > cnv->get_route()->index_of(check_pos)) {
-					break; // convoy is in this section
-				}
-			}
-		}
-
-		if (cnv_section_at==section) {
-			located_convoys.append(cnv);
+	update_convoy_sections(line);
+	uint16 located_convoy_count = 0;
+	for (uint32 icnv = 0; icnv < convoy_sections.get_count(); icnv++) {
+		if (convoy_sections[icnv].section == section) {
+			located_convoy_count++;
 		}
 	}
-	if (located_convoys.get_count() != convoy_count) {
-		convoy_count = located_convoys.get_count();
+	if (located_convoy_count != convoy_count) {
+		convoy_count = located_convoy_count;
 		remove_all();
-		for (uint32 icnv = 0; icnv < located_convoys.get_count(); icnv++) {
-			new_component<gui_convoy_access_arrow_t>(located_convoys.get_element(icnv));
+		for (uint32 icnv = 0; icnv < convoy_sections.get_count(); icnv++) {
+			if (convoy_sections[icnv].section == section) {
+				new_component<gui_convoy_access_arrow_t>(convoy_sections[icnv].convoy);
+			}
 		}
 		new_component<gui_fill_t>();
 		set_size(gui_aligned_container_t::get_size());
@@ -262,6 +294,7 @@ gui_line_waiting_status_t::gui_line_waiting_status_t(linehandle_t line_)
 
 void gui_line_waiting_status_t::init()
 {
+	invalidate_convoy_sections();
 	remove_all();
 	if (line.is_bound()) {
 		schedule = line->get_schedule();
@@ -471,6 +504,10 @@ void gui_line_waiting_status_t::draw(scr_coord offset)
 			// but since it is difficult to constantly monitor changes outside the component,
 			// we deal with it by automatically updating the entire table at regular intervals.
 			init();
+		}
+		else {
+			// Sibling location cells reuse one route scan for each parent draw.
+			invalidate_convoy_sections();
 		}
 		// need to recheck child components size
 		set_size(gui_aligned_container_t::get_size());
