@@ -46,9 +46,14 @@ void gui_signalbox_changer_t::update()
 	label.update();
 }
 
+bool gui_signalbox_changer_t::is_valid() const
+{
+	return signalbox_t::all_signalboxes.is_contained(sb);
+}
+
 void gui_signalbox_changer_t::draw(scr_coord offset)
 {
-	if(sig && sb){
+	if (is_valid() && sig) {
 		if (connected != sb->get_signal_list().is_contained(sig->get_pos())) {
 			update();
 		}
@@ -60,7 +65,7 @@ void gui_signalbox_changer_t::draw(scr_coord offset)
 
 bool gui_signalbox_changer_t::action_triggered(gui_action_creator_t *comp, value_t)
 {
-	if( sig->get_owner() != world()->get_active_player() ) {
+	if (!is_valid() || sig->get_owner() != world()->get_active_player()) {
 		return false;
 	}
 	if (comp == &bt_connect) {
@@ -165,6 +170,13 @@ void signal_connector_gui_t::draw(scr_coord pos, scr_size size)
 		destroy_win(this);
 	}
 
+	for (gui_signalbox_changer_t* selection : sb_selections) {
+		if (!selection->is_valid()) {
+			update(sig);
+			set_windowsize(get_min_windowsize());
+			break;
+		}
+	}
+
 	gui_frame_t::draw(pos, size);
 }
-
