@@ -398,12 +398,12 @@ void replace_frame_t::set_vehicles(bool init)
 	}
 	else
 	{
-		vector_tpl<const vehicle_desc_t*> *existing_vehicles = new vector_tpl<const vehicle_desc_t*>();
+		vector_tpl<const vehicle_desc_t*> existing_vehicles;
 		for(uint8 i = 0; i < vehicle_count; i ++)
 		{
-			existing_vehicles->append(veh_tmp_list[i]->get_desc());
+			existing_vehicles.append(veh_tmp_list[i]->get_desc());
 		}
-		convoy_assembler.set_vehicles(existing_vehicles);
+		convoy_assembler.set_vehicles(&existing_vehicles);
 	}
 	for (uint8 i = vehicle_count; i-- != 0; ) {
 		world()->get_public_player()->book_vehicle_number(-1, cnv->front()->get_desc()->get_waytype());
