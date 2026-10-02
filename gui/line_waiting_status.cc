@@ -432,11 +432,12 @@ void gui_line_waiting_status_t::init()
 							lb->set_fixed_width(lb->get_min_size().w);
 						}
 
-						if (cols==3) {
+						const uint8 remaining_cols = cols - 1 - show_name;
+						if (remaining_cols == 1) {
 							new_component<gui_empty_t>();
 						}
-						else if (cols>3) {
-							new_component_span<gui_empty_t>(cols - 2);
+						else if (remaining_cols > 1) {
+							new_component_span<gui_empty_t>(remaining_cols);
 						}
 					}
 
