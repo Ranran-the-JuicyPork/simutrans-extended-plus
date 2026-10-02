@@ -631,7 +631,11 @@ void ki_kontroll_t::draw(scr_coord pos, scr_size size)
 {
 	// Update free play
 	freeplay.pressed = welt->get_settings().is_freeplay();
-	if (welt->get_public_player()->is_locked() || !welt->get_settings().get_allow_player_change()) {
+	bool player_tools_allowed = true;
+	if (welt->get_scenario()->is_scripted()) {
+		player_tools_allowed = welt->get_scenario()->is_tool_allowed(NULL, TOOL_SWITCH_PLAYER | SIMPLE_TOOL);
+	}
+	if (welt->get_public_player()->is_locked() || !welt->get_settings().get_allow_player_change() || !player_tools_allowed) {
 		freeplay.disable();
 	}
 	else {
