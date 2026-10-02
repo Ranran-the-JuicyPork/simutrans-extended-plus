@@ -721,8 +721,8 @@ void player_ranking_frame_t::update_chart(bool init_player_button)
 	last_month = welt->get_last_month();
 
 	int total_x = cb_x_axis_selector.count_elements();
-	if (player_ranking_frame_t::selected_x_axis> total_x) {
-		player_ranking_frame_t::selected_x_axis = min(1, total_x);
+	if (player_ranking_frame_t::selected_x_axis >= total_x) {
+		player_ranking_frame_t::selected_x_axis = total_x > 1 ? 1 : 0;
 	}
 	cb_x_axis_selector.set_selection(player_ranking_frame_t::selected_x_axis);
 	chart.set_highlight_x(player_ranking_frame_t::selected_x_axis);
