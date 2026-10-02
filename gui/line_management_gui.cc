@@ -105,6 +105,8 @@ void line_management_gui_t::rdwr(loadsave_t *file)
 			old_schedule = NULL;
 
 			schedule_t *save_schedule = schedule->copy();
+			delete schedule;
+			schedule = NULL;
 
 			schedule_gui_t::init(line);
 			title.printf("%s - %s", translator::translate("Fahrplan"), line->get_name());
@@ -122,10 +124,11 @@ void line_management_gui_t::rdwr(loadsave_t *file)
 			win_set_magic(this, (ptrdiff_t)line.get_rep());
 		}
 		else {
+			uint16 failed_line_id = line.get_id();
 			line = linehandle_t();
 			player = NULL; // prevent destructor from updating
 			destroy_win( this );
-			dbg->error( "line_management_gui_t::rdwr", "Could not restore schedule window for line id %i", line.get_id() );
+			dbg->error( "line_management_gui_t::rdwr", "Could not restore schedule window for line id %i", failed_line_id );
 		}
 	}
 }
