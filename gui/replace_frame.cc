@@ -620,7 +620,7 @@ bool replace_frame_t::replace_convoy(convoihandle_t cnv_rpl, bool mark)
 	break;
 	}
 
-	return true;
+	return state == state_replace;
 }
 
 
