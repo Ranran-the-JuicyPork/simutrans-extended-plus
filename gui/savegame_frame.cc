@@ -212,7 +212,7 @@ void savegame_frame_t::add_section(std::string &name){
 void savegame_frame_t::add_path(const char * path){
 
 	if (!this->searchpath_defined) {
-		sprintf(this->searchpath, "%s", path);
+		this->searchpath = path;
 		this->searchpath_defined = true;
 	}
 	this->paths.append(path);
@@ -500,7 +500,7 @@ bool savegame_frame_t::action_triggered(gui_action_creator_t *component, value_t
 		}
 		else {
 			if(searchpath_defined) {
-				tstrncpy(buf, searchpath, lengthof(buf));
+				tstrncpy(buf, searchpath.c_str(), lengthof(buf));
 			}
 			else {
 				buf[0] = 0;

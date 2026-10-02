@@ -42,7 +42,7 @@ private:
 
 	const char *suffix;                //@< Extension of the files this dialog will use, can be NULL Can include or not the "." at start, will work on both cases
 	char        ibuf[PATH_MAX];        //@< Input buffer for the text input component
-	char        searchpath[PATH_MAX];  //@< Default search path
+	std::string searchpath;            //@< Default search path
 	bool        in_action;             //@< To avoid double mouse action
 	bool        only_directories;      //@< Search for directories (used in pak_selector)
 	bool        searchpath_defined;    //@< Is default path defined?
