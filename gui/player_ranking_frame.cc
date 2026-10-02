@@ -113,35 +113,35 @@ static int compare_atv(uint8 player_nr_a, uint8 player_nr_b, uint8 atv_index)
 
 	if (a_player && b_player) {
 		switch (player_ranking_frame_t::selected_hist_mode) {
-		case AC_HISTORY_MONTHS:
-			comp = compare_descending(
-				a_player->get_finance()->get_history_veh_month((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis, atv_index),
-				b_player->get_finance()->get_history_veh_month((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis, atv_index));
-			break;
-		case AC_HISTORY_YEARS:
-		default:
-			comp = compare_descending(
-				a_player->get_finance()->get_history_veh_year((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis, atv_index),
-				b_player->get_finance()->get_history_veh_year((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis, atv_index));
-			break;
-		}
-		if (comp == 0) {
-		comp = compare_descending(a_player->get_age(), b_player->get_age());
-		}
-		if (comp == 0 && player_ranking_frame_t::selected_x_axis) {
-		switch (player_ranking_frame_t::selected_hist_mode) {
 			case AC_HISTORY_MONTHS:
 				comp = compare_descending(
-					a_player->get_finance()->get_history_veh_month((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis-1, atv_index),
-					b_player->get_finance()->get_history_veh_month((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis-1, atv_index));
+					a_player->get_finance()->get_history_veh_month((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis, atv_index),
+					b_player->get_finance()->get_history_veh_month((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis, atv_index));
 				break;
 			case AC_HISTORY_YEARS:
 			default:
 				comp = compare_descending(
-					a_player->get_finance()->get_history_veh_year((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis-1, atv_index),
-					b_player->get_finance()->get_history_veh_year((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis-1, atv_index));
+					a_player->get_finance()->get_history_veh_year((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis, atv_index),
+					b_player->get_finance()->get_history_veh_year((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis, atv_index));
 				break;
 		}
+		if (comp == 0) {
+			comp = compare_descending(a_player->get_age(), b_player->get_age());
+		}
+		if (comp == 0 && player_ranking_frame_t::selected_x_axis) {
+			switch (player_ranking_frame_t::selected_hist_mode) {
+				case AC_HISTORY_MONTHS:
+					comp = compare_descending(
+						a_player->get_finance()->get_history_veh_month((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis-1, atv_index),
+						b_player->get_finance()->get_history_veh_month((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis-1, atv_index));
+					break;
+				case AC_HISTORY_YEARS:
+				default:
+					comp = compare_descending(
+						a_player->get_finance()->get_history_veh_year((transport_type)player_ranking_frame_t::transport_type_option, player_ranking_frame_t::selected_x_axis-1, atv_index),
+						b_player->get_finance()->get_history_veh_year((transport_type)player_ranking_frame_t::selected_x_axis-1, atv_index));
+					break;
+			}
 		}
 	}
 	if (comp == 0) {
@@ -158,35 +158,35 @@ static int compare_atc(uint8 player_nr_a, uint8 player_nr_b, uint8 atc_index)
 
 	if (a_player && b_player) {
 		switch (player_ranking_frame_t::selected_hist_mode) {
-		case AC_HISTORY_MONTHS:
-			comp = compare_descending(
-				a_player->get_finance()->get_history_com_month(player_ranking_frame_t::selected_x_axis, atc_index),
-				b_player->get_finance()->get_history_com_month(player_ranking_frame_t::selected_x_axis, atc_index));
-			break;
-		case AC_HISTORY_YEARS:
-		default:
-			comp = compare_descending(
-				a_player->get_finance()->get_history_com_year(player_ranking_frame_t::selected_x_axis, atc_index),
-				b_player->get_finance()->get_history_com_year(player_ranking_frame_t::selected_x_axis, atc_index));
-			break;
-		}
-		if (comp == 0) {
-		comp = compare_descending(a_player->get_age(), b_player->get_age());
-		}
-		if (comp == 0 && player_ranking_frame_t::selected_x_axis) {
-		switch (player_ranking_frame_t::selected_hist_mode) {
 			case AC_HISTORY_MONTHS:
 				comp = compare_descending(
-					a_player->get_finance()->get_history_com_month(player_ranking_frame_t::selected_x_axis-1, atc_index),
-					b_player->get_finance()->get_history_com_month(player_ranking_frame_t::selected_x_axis-1, atc_index));
+					a_player->get_finance()->get_history_com_month(player_ranking_frame_t::selected_x_axis, atc_index),
+					b_player->get_finance()->get_history_com_month(player_ranking_frame_t::selected_x_axis, atc_index));
 				break;
 			case AC_HISTORY_YEARS:
 			default:
 				comp = compare_descending(
-					a_player->get_finance()->get_history_com_year(player_ranking_frame_t::selected_x_axis-1, atc_index),
-					b_player->get_finance()->get_history_com_year(player_ranking_frame_t::selected_x_axis-1, atc_index));
+					a_player->get_finance()->get_history_com_year(player_ranking_frame_t::selected_x_axis, atc_index),
+					b_player->get_finance()->get_history_com_year(player_ranking_frame_t::selected_x_axis, atc_index));
 				break;
 		}
+		if (comp == 0) {
+			comp = compare_descending(a_player->get_age(), b_player->get_age());
+		}
+		if (comp == 0 && player_ranking_frame_t::selected_x_axis) {
+			switch (player_ranking_frame_t::selected_hist_mode) {
+				case AC_HISTORY_MONTHS:
+					comp = compare_descending(
+						a_player->get_finance()->get_history_com_month(player_ranking_frame_t::selected_x_axis-1, atc_index),
+						b_player->get_finance()->get_history_com_month(player_ranking_frame_t::selected_x_axis-1, atc_index));
+					break;
+				case AC_HISTORY_YEARS:
+				default:
+					comp = compare_descending(
+						a_player->get_finance()->get_history_com_year(player_ranking_frame_t::selected_x_axis-1, atc_index),
+						b_player->get_finance()->get_history_com_year(player_ranking_frame_t::selected_x_axis-1, atc_index));
+					break;
+			}
 		}
 	}
 	if (comp == 0) {
