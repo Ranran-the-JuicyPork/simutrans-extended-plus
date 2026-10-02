@@ -373,7 +373,11 @@ void savegame_frame_t::add_file(const char *fullpath, const char *filename, cons
 	strcpy(name, filename);
 
 	if(!no_cutting_suffix) {
-		name[strlen(name)-4] = '\0';
+		const size_t suffix_length = strlen(suffix);
+		const size_t name_length = strlen(name);
+		if (suffix_length <= name_length) {
+			name[name_length - suffix_length] = '\0';
+		}
 	}
 	button->set_typ( button_t::roundbox | button_t::flexible);
 	button->set_no_translate(true);
@@ -474,7 +478,20 @@ bool savegame_frame_t::infowin_event(const event_t *event)
 bool savegame_frame_t::check_file(const char *filename, const char *suffix)
 {
 	// assume truth, if there is no pattern to compare
-	return  suffix==NULL  ||  suffix[0]==0  ||  (strncmp(filename+strlen(filename)-4, suffix, 4)== 0);
+	if (suffix == NULL || suffix[0] == '\0') {
+		return true;
+	}
+
+	const size_t filename_length = strlen(filename);
+	const size_t suffix_length = strlen(suffix);
+	if (suffix[0] == '.') {
+		return filename_length >= suffix_length &&
+			strcmp(filename + filename_length - suffix_length, suffix) == 0;
+	}
+
+	return filename_length > suffix_length &&
+		filename[filename_length - suffix_length - 1] == '.' &&
+		strcmp(filename + filename_length - suffix_length, suffix) == 0;
 }
 
 
