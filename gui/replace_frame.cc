@@ -580,7 +580,7 @@ bool replace_frame_t::replace_convoy(convoihandle_t cnv_rpl, bool mark)
 			break;
 		}
 
-		if(!welt->get_active_player()->can_afford(0 - money))
+		if(!welt->get_active_player()->can_afford(0 - calc_total_cost(cnv_rpl)))
 		{
 			const char *err = NOTICE_INSUFFICIENT_FUNDS;
 			news_img *box = new news_img(err);
