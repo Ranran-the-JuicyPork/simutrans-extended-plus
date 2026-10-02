@@ -134,18 +134,33 @@ bool gui_convoy_access_arrow_t::infowin_event(const event_t * ev)
 void gui_line_convoy_location_t::check_convoy()
 {
 	update_convoy_sections(line);
-	uint16 located_convoy_count = 0;
+	uint32 located_convoy_count = 0;
 	for (uint32 icnv = 0; icnv < convoy_sections.get_count(); icnv++) {
 		if (convoy_sections[icnv].section == section) {
 			located_convoy_count++;
 		}
 	}
-	if (located_convoy_count != convoy_count) {
-		convoy_count = located_convoy_count;
+	bool convoy_list_changed = located_convoy_count != convoy_handles.get_count();
+	if (!convoy_list_changed) {
+		uint32 convoy_index = 0;
+		for (uint32 icnv = 0; icnv < convoy_sections.get_count(); icnv++) {
+			if (convoy_sections[icnv].section == section) {
+				if (convoy_sections[icnv].convoy != convoy_handles[convoy_index]) {
+					convoy_list_changed = true;
+					break;
+				}
+				convoy_index++;
+			}
+		}
+	}
+	if (convoy_list_changed) {
+		convoy_handles.clear();
 		remove_all();
 		for (uint32 icnv = 0; icnv < convoy_sections.get_count(); icnv++) {
 			if (convoy_sections[icnv].section == section) {
-				new_component<gui_convoy_access_arrow_t>(convoy_sections[icnv].convoy);
+				const convoihandle_t cnv = convoy_sections[icnv].convoy;
+				convoy_handles.append(cnv);
+				new_component<gui_convoy_access_arrow_t>(cnv);
 			}
 		}
 		new_component<gui_fill_t>();
