@@ -48,7 +48,7 @@ class building_info_t : public base_infowin_t, private action_listener_t
 	cbuffer_t building_tooltip;
 	const gebaeude_t *building;
 	player_t *owner;
-	static sint16 tabstate;
+	sint16 tabstate;
 
 	location_view_t building_view;
 	gui_aligned_container_t cont_near_by_halt, cont_signalbox_info, signal_table;

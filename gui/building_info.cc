@@ -24,8 +24,6 @@
 #include "components/gui_colorbox.h"
 #include "components/gui_divider.h"
 
-sint16 building_info_t::tabstate = -1;
-
 gui_building_stats_t::gui_building_stats_t(const gebaeude_t* gb, PIXVAL color)
 {
 	building = NULL;
@@ -335,6 +333,7 @@ void gui_building_stats_t::draw(scr_coord offset)
 
 building_info_t::building_info_t(gebaeude_t* gb, player_t* owner) :
 	base_infowin_t(translator::translate(gb->get_name()), owner),
+	tabstate(-1),
 	building_view(koord3d::invalid, scr_size(max(64, get_base_tile_raster_width()), max(56, (get_base_tile_raster_width() * 7) / 8))),
 	cont_stats(gb, get_titlecolor()),
 	scrolly_stats(&cont_stats, true),
@@ -417,6 +416,7 @@ building_info_t::building_info_t(gebaeude_t* gb, player_t* owner) :
 		update_signalbox_info();
 		tabs.set_active_tab_index(2);
 	}
+	tabstate = tabs.get_active_tab_index();
 	update_near_by_halt();
 	building->info(buf);
 	recalc_size();
