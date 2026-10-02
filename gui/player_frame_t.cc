@@ -587,6 +587,7 @@ void ki_kontroll_t::update_income()
 	// Update finance
 	for(int i=0; i<MAX_PLAYER_COUNT-1; i++) {
 		ai_income[i]->buf().clear();
+		lb_take_over_cost[i].buf().clear();
 		player_t *player = welt->get_player(i);
 		if(	player != NULL	) {
 			const player_t::solvency_status ss = player->check_solvency();
