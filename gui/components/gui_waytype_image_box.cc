@@ -21,13 +21,15 @@ gui_waytype_image_box_t::gui_waytype_image_box_t(waytype_t wt, bool yesno) :
 
 void gui_waytype_image_box_t::set_waytype(waytype_t wt)
 {
-	if (wt!=invalid_wt && skinverwaltung_t::get_waytype_skin(wt)) {
-		set_image(skinverwaltung_t::get_waytype_skin(wt)->get_image_id(0), true);
+	const skin_desc_t *skin = wt != invalid_wt ? skinverwaltung_t::get_waytype_skin(wt) : NULL;
+	if (skin) {
+		set_image(skin->get_image_id(0), true);
+		bgcol = world()->get_settings().get_waytype_color(wt);
 	}
 	else {
 		set_image(IMG_EMPTY);
+		bgcol = 0;
 	}
-	bgcol = world()->get_settings().get_waytype_color(wt);
 	set_size(scr_size( gui_image_t::get_size().w, gui_image_t::get_size().h) );
 }
 
@@ -66,24 +68,24 @@ scr_size gui_waytype_image_box_t::get_min_size() const
 void gui_waytype_button_t::set_waytype(waytype_t wt)
 {
 	this->wt = wt;
-	set_image(wt == invalid_wt ? IMG_EMPTY : skinverwaltung_t::get_waytype_skin(wt)->get_image_id(0));
-	enable(way_builder_t::is_active_waytype(wt));
-	if (enabled()) {
-		background_color = world()->get_settings().get_waytype_color(wt);
+	const skin_desc_t *skin = wt != invalid_wt ? skinverwaltung_t::get_waytype_skin(wt) : NULL;
+
+	if (skin) {
+		set_image(skin->get_image_id(0));
+		enable(way_builder_t::is_active_waytype(wt));
+		background_color = enabled() ? world()->get_settings().get_waytype_color(wt) : 44373; // gray
 	}
 	else {
+		set_image(IMG_EMPTY);
+		enable(false);
 		background_color = 44373; // gray
 	}
 
 	set_tooltip(gui_waytype_tab_panel_t::get_translated_waytype_name(wt));
 
 	scr_coord_val x = 0, y = 0, w = 0, h = 0;
-	if (wt != invalid_wt) {
-
-		display_get_base_image_offset(skinverwaltung_t::get_waytype_skin(wt)->get_image_id(0), &x, &y, &w, &h);
-
-		scr_coord remove_offset = scr_coord(-x, -y);
-		scr_size size_par;
+	if (skin) {
+		display_get_base_image_offset(skin->get_image_id(0), &x, &y, &w, &h);
 	}
 
 	set_size( scr_size( max(w+6, D_BUTTON_HEIGHT<<1)+2, max(h-y+4, D_TAB_HEADER_HEIGHT)));
