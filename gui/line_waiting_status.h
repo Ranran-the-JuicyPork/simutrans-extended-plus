@@ -32,7 +32,7 @@ class gui_line_convoy_location_t : public gui_aligned_container_t
 {
 	linehandle_t line;
 	uint8 section; // schedule entry
-	uint16 convoy_count = 0;
+	vector_tpl<convoihandle_t> convoy_handles;
 
 public:
 	gui_line_convoy_location_t(linehandle_t line_, uint8 prev_entry)
