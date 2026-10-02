@@ -136,7 +136,7 @@ void signal_connector_gui_t::update(const signal_t* sig)
 		}
 		else {
 			for(gui_signalbox_changer_t* &selection : sb_selections) {
-				add_component(selection);
+				take_component(selection);
 			}
 		}
 		reset_min_windowsize();
