@@ -301,7 +301,7 @@ bool goods_frame_t::compare_goods(goods_desc_t const* const w1, goods_desc_t con
 		case by_revenue:
 			{
 				sint64 price[2];
-				const uint16 journey_tenths = (uint16)tenths_from_meters_and_kmh(distance_meters, vehicle_speed);
+				const sint64 journey_tenths = tenths_from_meters_and_kmh(distance_meters, vehicle_speed);
 				price[0] = w1->get_total_fare(distance_meters, 0, comfort, catering_level, min(g_class, w1->get_number_of_classes() - 1), journey_tenths);
 				price[1] = w2->get_total_fare(distance_meters, 0, comfort, catering_level, min(g_class, w2->get_number_of_classes() - 1), journey_tenths);
 
@@ -507,13 +507,13 @@ void goods_frame_t::rdwr(loadsave_t *file)
 		sortedby.set_selection(s);
 		sortby = (sort_mode_t)b;
 		sortreverse = sort_order.pressed;
+		filter_goods = filter_goods_toggle.pressed;
 		sort_list();
 		distance_input.set_value(distance);
 		comfort_input.set_value(comfort);
 		catering_input.set_value(catering_level);
 		speed_input.set_value(vehicle_speed);
 		class_input.set_value(g_class);
-		filter_goods = filter_goods_toggle.pressed;
 		default_sortmode = s;
 	}
 }
