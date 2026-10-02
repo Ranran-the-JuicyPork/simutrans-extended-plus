@@ -647,6 +647,12 @@ void private_car_t::rdwr(loadsave_t *file)
 
 bool private_car_t::can_enter_tile(grund_t *gr)
 {
+	if(gr == NULL) {
+		dbg->warning("private_car_t::can_enter_tile()", "Attempted to enter a NULL ground");
+		time_to_life = 0;
+		return false;
+	}
+
 	if(gr->get_top()>200) {
 		// already too many things here
 		return false;
@@ -685,7 +691,11 @@ bool private_car_t::can_enter_tile(grund_t *gr)
 	const uint8 this_direction = get_direction();
 	bool frei = false;
 	vehicle_base_t *dt = NULL;
-	const strasse_t* current_str = (strasse_t*)(welt->lookup(get_pos())->get_weg(road_wt));
+	const grund_t* current_gr = welt->lookup(get_pos());
+	const strasse_t* current_str = current_gr ? static_cast<const strasse_t*>(current_gr->get_weg(road_wt)) : NULL;
+	if(current_gr == NULL) {
+		dbg->warning("private_car_t::can_enter_tile()", "Current ground is NULL at %s", get_pos().get_str());
+	}
 	if(  get_pos()==pos_next_next  ) {
 		// turning around => single check
 		const uint8 next_direction = ribi_t::backward(this_direction);
@@ -956,6 +966,17 @@ bool private_car_t::can_enter_tile(grund_t *gr)
 
 void private_car_t::enter_tile(grund_t* gr)
 {
+	if(gr == NULL) {
+		dbg->warning("private_car_t::enter_tile()", "Attempted to enter a NULL ground at %s", pos_next.get_str());
+		time_to_life = 0;
+		return;
+	}
+	if(gr->get_weg(road_wt) == NULL) {
+		dbg->warning("private_car_t::enter_tile()", "Attempted to enter a ground without a road at %s", gr->get_pos().get_str());
+		time_to_life = 0;
+		return;
+	}
+
 	// Destination city car code revived from an older version of Simutrans.
 	// (Thanks to Prissi for finding this older code).
 	if(target!=koord::invalid  &&  koord_distance(pos_next.get_2d(),target)<10) {
@@ -1000,22 +1021,30 @@ grund_t* private_car_t::hop_check()
 
 	if(  weg->has_sign()  ) {
 		const roadsign_t* rs = from->find<roadsign_t>();
-		const roadsign_desc_t* rs_desc = rs->get_desc();
-		if(  rs_desc->is_traffic_light()  &&  (rs->get_dir()&direction90)==0  ) {
-			// red traffic light, but we go on, if we are already on a traffic light
-			bool go_on = false;
-			if(  const grund_t *gr_current = welt->lookup(get_pos())  ) {
-				if(  const roadsign_t *rs = gr_current->find<roadsign_t>()  ) {
-					go_on = rs  &&  rs->get_desc()->is_traffic_light()  &&  !from->ist_uebergang();
+		if(rs == NULL) {
+			dbg->warning("private_car_t::hop_check()", "Road reports a sign but no road sign object exists at %s", from->get_pos().get_str());
+		}
+		else if(rs->get_desc() == NULL) {
+			dbg->warning("private_car_t::hop_check()", "Road sign at %s has no descriptor", from->get_pos().get_str());
+		}
+		else {
+			const roadsign_desc_t* rs_desc = rs->get_desc();
+			if(  rs_desc->is_traffic_light()  &&  (rs->get_dir()&direction90)==0  ) {
+				// red traffic light, but we go on, if we are already on a traffic light
+				bool go_on = false;
+				if(  const grund_t *gr_current = welt->lookup(get_pos())  ) {
+					if(  const roadsign_t *current_rs = gr_current->find<roadsign_t>()  ) {
+						go_on = current_rs && current_rs->get_desc() && current_rs->get_desc()->is_traffic_light() && !from->ist_uebergang();
+					}
 				}
-			}
-			if(  !go_on   ) {
-				direction = direction90;
-				calc_image();
-				// wait here
-				current_speed = 48;
-				weg_next = 0;
-				return NULL;
+				if(  !go_on   ) {
+					direction = direction90;
+					calc_image();
+					// wait here
+					current_speed = 48;
+					weg_next = 0;
+					return NULL;
+				}
 			}
 		}
 	}
@@ -1178,6 +1207,11 @@ grund_t* private_car_t::hop_check()
 					{
 						// check, if this is just a single tile deep after a crossing
 						weg_t* w = to->get_weg(road_wt);
+						if (w == NULL) {
+							dbg->warning("private_car_t::hop_check()", "Neighbour at %s has no road", to->get_pos().get_str());
+							ribi &= ~ribi_t::nesw[r];
+							continue;
+						}
 						if (ribi_t::is_single(w->get_ribi()) && (w->get_ribi() & ribi_t::nesw[r]) == 0 && !ribi_t::is_single(ribi))
 						{
 							ribi &= ~ribi_t::nesw[r];
@@ -1186,12 +1220,17 @@ grund_t* private_car_t::hop_check()
 						// check, if roadsign forbid next step ...
 						if (w->has_sign()) {
 							const roadsign_t* rs = to->find<roadsign_t>();
-							const roadsign_desc_t* rs_desc = rs->get_desc();
-							if (rs_desc->get_min_speed() > desc->get_topspeed() || (rs_desc->is_private_way() && (rs->get_player_mask() & 2) == 0))
-							{
-								// not allowed to go here
-								ribi &= ~ribi_t::nesw[r];
-								continue;
+							if (rs == NULL || rs->get_desc() == NULL) {
+								dbg->warning("private_car_t::hop_check()", "Road at %s reports a sign but the sign object or descriptor is missing", to->get_pos().get_str());
+							}
+							else {
+								const roadsign_desc_t* rs_desc = rs->get_desc();
+								if (rs_desc->get_min_speed() > desc->get_topspeed() || (rs_desc->is_private_way() && (rs->get_player_mask() & 2) == 0))
+								{
+									// not allowed to go here
+									ribi &= ~ribi_t::nesw[r];
+									continue;
+								}
 							}
 						}
 
@@ -1301,12 +1340,22 @@ grund_t* private_car_t::hop_check()
 
 void private_car_t::hop(grund_t* to)
 {
+	if(to == NULL) {
+		dbg->warning("private_car_t::hop()", "Attempted to hop to a NULL ground; car at %s, next=%s, next_next=%s", get_pos().get_str(), pos_next.get_str(), pos_next_next.get_str());
+		time_to_life = 0;
+		return;
+	}
 
 	// Check whether this private car should pay a road toll.
 
 	//weg_t* const way = get_weg(); // Occasionally, the way returned here was corrupt (possibly deleted)
 
 	weg_t* const way = to->get_weg(road_wt);
+	if(way == NULL) {
+		dbg->warning("private_car_t::hop()", "Attempted to hop to a ground without a road at %s; car at %s, next=%s, next_next=%s", to->get_pos().get_str(), get_pos().get_str(), pos_next.get_str(), pos_next_next.get_str());
+		time_to_life = 0;
+		return;
+	}
 	const uint32 tiles_per_km = 1000 / welt->get_settings().get_meters_per_tile();
 	if(way && tiles_since_last_increment++ > tiles_per_km)
 	{
@@ -1357,7 +1406,7 @@ void private_car_t::hop(grund_t* to)
 
 	calc_current_speed(to);
 
-	strasse_t *str = (strasse_t*)(to->get_weg(road_wt));
+	strasse_t *str = static_cast<strasse_t *>(way);
 	//decide if overtaking citycar should go back to the traffic lane.
 	if(  get_tiles_overtaking() == 1  &&  str->get_overtaking_mode() <= oneway_mode  ){
 		vehicle_base_t* v = NULL;

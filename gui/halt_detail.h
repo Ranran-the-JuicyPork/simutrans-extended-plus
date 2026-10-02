@@ -107,12 +107,18 @@ private:
 	halthandle_t halt;
 
 	vector_tpl<halthandle_t> halt_list;
+	vector_tpl<halthandle_t> cached_connected_halts;
 	uint32 line_selected;
 
 	uint8 selected_route_catg_index = goods_manager_t::INDEX_PAS;
 	uint8 selected_class = 255;
 	bool station_display_mode;
+	uint8 cached_route_catg_index = goods_manager_t::INDEX_NONE;
+	uint8 cached_class = 255;
+	bool cached_station_display_mode = false;
+	bool halt_list_cache_valid = false;
 
+	bool is_halt_list_current(uint8 catg_index, uint8 g_class, bool station_mode) const;
 	void draw_list_by_catg(scr_coord offset);
 	void draw_list_by_dest(scr_coord offset);
 
