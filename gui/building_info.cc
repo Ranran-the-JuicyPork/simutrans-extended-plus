@@ -24,8 +24,6 @@
 #include "components/gui_colorbox.h"
 #include "components/gui_divider.h"
 
-sint16 building_info_t::tabstate = -1;
-
 gui_building_stats_t::gui_building_stats_t(const gebaeude_t* gb, PIXVAL color)
 {
 	building = NULL;
@@ -335,6 +333,10 @@ void gui_building_stats_t::draw(scr_coord offset)
 
 building_info_t::building_info_t(gebaeude_t* gb, player_t* owner) :
 	base_infowin_t(translator::translate(gb->get_name()), owner),
+	tabstate(-1),
+	last_near_by_halt_update_ticks(-1),
+	signalbox_signal_count(0),
+	signalbox_info_initialized(false),
 	building_view(koord3d::invalid, scr_size(max(64, get_base_tile_raster_width()), max(56, (get_base_tile_raster_width() * 7) / 8))),
 	cont_stats(gb, get_titlecolor()),
 	scrolly_stats(&cont_stats, true),
@@ -417,6 +419,7 @@ building_info_t::building_info_t(gebaeude_t* gb, player_t* owner) :
 		update_signalbox_info();
 		tabs.set_active_tab_index(2);
 	}
+	tabstate = tabs.get_active_tab_index();
 	update_near_by_halt();
 	building->info(buf);
 	recalc_size();
@@ -548,16 +551,23 @@ void building_info_t::update_near_by_halt()
 		cont_near_by_halt.new_component<gui_empty_t>();
 	}
 	resize(scr_size(0,0));
+	last_near_by_halt_update_ticks = welt->get_ticks();
 }
 
 void building_info_t::update_signalbox_info() {
 	const signalbox_t *sb = static_cast<const signalbox_t *>(building->get_first_tile());
-	lb_signals.buf().printf(": %d/%d", sb->get_number_of_signals_controlled_from_this_box(), building->get_tile()->get_desc()->get_capacity());
+	const uint32 signal_count = sb->get_number_of_signals_controlled_from_this_box();
+	if (signalbox_info_initialized && signal_count == signalbox_signal_count) {
+		return;
+	}
+	signalbox_signal_count = signal_count;
+	signalbox_info_initialized = true;
+	lb_signals.buf().printf(": %u/%u", signal_count, building->get_tile()->get_desc()->get_capacity());
 	lb_signals.update();
 
 	signal_table.remove_all();
 	cont_signalbox_info.set_visible(false);
-	if (sb->get_number_of_signals_controlled_from_this_box() > 0) {
+	if (signal_count > 0) {
 		signal_table.set_margin(scr_size(D_MARGIN_LEFT, 0), scr_size(0, 0));
 		// connected signal list
 		const slist_tpl<koord3d> &signals = sb->get_signal_list();
@@ -628,6 +638,14 @@ bool building_info_t::action_triggered(gui_action_creator_t *comp, value_t)
 	if(  comp == &tabs  ) {
 		const sint16 old_tab = tabstate;
 		tabstate = tabs.get_active_tab_index();
+		if (tabstate != old_tab) {
+			if (tabstate == 1) {
+				update_near_by_halt();
+			}
+			else if (tabstate == 2) {
+				update_signalbox_info();
+			}
+		}
 		if ( get_windowsize().h == get_min_windowsize().h || tabstate == old_tab  ) {
 			set_tab_opened();
 		}
@@ -647,7 +665,13 @@ void building_info_t::draw(scr_coord pos, scr_size size)
 			cont_stats.update_stats();
 			break;
 		case 1:
-			update_near_by_halt(); break;
+		{
+			const sint64 ticks = welt->get_ticks();
+			if (ticks < last_near_by_halt_update_ticks || ticks - last_near_by_halt_update_ticks > 10000) {
+				update_near_by_halt();
+			}
+			break;
+		}
 		case 2:
 			update_signalbox_info(); break;
 		default:
