@@ -322,11 +322,15 @@ bool ki_kontroll_t::action_triggered( gui_action_creator_t *comp,value_t p )
 
 			// make active player
 			if(	p.i<player_t::MAX_AI	&&	p.i>0	) {
-				player_active[i-2].set_visible(true);
+				if (i >= 2) {
+					player_active[i-2].set_visible(true);
+				}
 				welt->get_settings().set_player_type(i, (uint8)p.i);
 			}
 			else {
-				player_active[i-2].set_visible(false);
+				if (i >= 2) {
+					player_active[i-2].set_visible(false);
+				}
 				player_select[i].set_selection(0);
 				welt->get_settings().set_player_type(i, 0);
 			}
