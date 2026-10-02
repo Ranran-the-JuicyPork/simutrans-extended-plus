@@ -159,15 +159,22 @@ bool signal_connector_gui_t::is_weltpos()
 void signal_connector_gui_t::map_rotate90(sint16 new_ysize)
 {
 	sig_pos.rotate90(new_ysize);
-	signal_t* sig = welt->lookup(sig_pos)->find<signal_t>();
+	grund_t* gr = welt->lookup(sig_pos);
+	signal_t* sig = gr ? gr->find<signal_t>() : NULL;
+	if (!sig) {
+		destroy_win(this);
+		return;
+	}
 	update(sig);
 }
 
 void signal_connector_gui_t::draw(scr_coord pos, scr_size size)
 {
-	signal_t* sig = welt->lookup(sig_pos)->find<signal_t>();
+	grund_t* gr = welt->lookup(sig_pos);
+	signal_t* sig = gr ? gr->find<signal_t>() : NULL;
 	if (!sig) {
 		destroy_win(this);
+		return;
 	}
 
 	for (gui_signalbox_changer_t* selection : sb_selections) {
