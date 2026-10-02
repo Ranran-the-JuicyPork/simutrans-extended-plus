@@ -83,9 +83,9 @@ void gui_waytype_button_t::set_waytype(waytype_t wt)
 
 	set_tooltip(gui_waytype_tab_panel_t::get_translated_waytype_name(wt));
 
-	scr_coord_val x = 0, y = 0, w = 0, h = 0;
+	scr_coord_val y = 0, w = 0, h = 0;
 	if (skin) {
-		display_get_base_image_offset(skin->get_image_id(0), &x, &y, &w, &h);
+		display_get_base_image_offset(skin->get_image_id(0), NULL, &y, &w, &h);
 	}
 
 	set_size( scr_size( max(w+6, D_BUTTON_HEIGHT<<1)+2, max(h-y+4, D_TAB_HEADER_HEIGHT)));
