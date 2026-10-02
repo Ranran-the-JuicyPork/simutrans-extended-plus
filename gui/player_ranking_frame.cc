@@ -626,8 +626,7 @@ bool player_ranking_frame_t::is_chart_table_zero(uint8 player_nr) const
 {
 	// search for any non-zero values
 	if (player_t* player = welt->get_player(player_nr)) {
-		int age = (int)player->get_age();
-		const bool is_atv = history_type_idx[selected_item * 2];
+		const int age = (int)(selected_hist_mode == AC_HISTORY_MONTHS ? player->get_player_age() : player->get_age());
 		for (int y = 0; y < MAX_PLAYER_HISTORY_MONTHS; y++) {
 			if (get_value_from_history(player, y)) return false;
 			if (age-y<0) break;
