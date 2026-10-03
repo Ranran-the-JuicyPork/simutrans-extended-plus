@@ -95,7 +95,10 @@ void signal_info_t::update_data()
 				lb_sb_name.buf().append(translator::translate(gb->get_name()));
 
 				const grund_t *ground = welt->lookup_kartenboden(sb.x, sb.y);
-				bool sb_underground = ground->get_hoehe() > sb.z;
+				const bool sb_underground = ground && ground->get_hoehe() > sb.z;
+				if (!ground) {
+					dbg->warning("signal_info_t::update_data()", "Signalbox ground could not be found");
+				}
 
 				char sb_coordinates[20];
 				sprintf(sb_coordinates, "<%i,%i>", sb.x, sb.y);
