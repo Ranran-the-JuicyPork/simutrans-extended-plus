@@ -20,9 +20,6 @@
 #include "../simsignalbox.h"
 #include "../utils/simstring.h"
 
-#include <string>
-
-
 signal_info_t::signal_info_t(signal_t* const s) :
 	obj_infowin_t(s),
 	sig(s)
@@ -37,6 +34,7 @@ signal_info_t::signal_info_t(signal_t* const s) :
 		add_component(&bt_goto_signalbox);
 		bt_goto_signalbox.add_listener(this);
 
+		lb_sb_name.set_fixed_width(250);
 		add_component(&lb_sb_name);
 
 		bt_info_signalbox.init(button_t::roundbox, "Details");
@@ -94,28 +92,7 @@ void signal_info_t::update_data()
 		if (gr) {
 			const gebaeude_t* gb = gr->get_building();
 			if (gb) {
-				std::string sb_name(translator::translate(gb->get_name()));
-				int max_width = 250;
-				int max_lines = 5; // Set a limit
-
-				size_t next_char_index = 0;
-
-				for (int l = 0; l < max_lines; l++) {
-					next_char_index = display_fit_proportional(sb_name.c_str(), max_width);
-
-					if (sb_name[next_char_index] == '\0') {
-						lb_sb_name.buf().append(sb_name.c_str());
-						break;
-					}
-					else {
-						lb_sb_name.buf().append(sb_name.c_str(), next_char_index);
-						if (l + 1 == max_lines) {
-							lb_sb_name.buf().append("...");
-						}
-
-						sb_name.erase(0, next_char_index);
-					}
-				}
+				lb_sb_name.buf().append(translator::translate(gb->get_name()));
 
 				const grund_t *ground = welt->lookup_kartenboden(sb.x, sb.y);
 				bool sb_underground = ground->get_hoehe() > sb.z;
