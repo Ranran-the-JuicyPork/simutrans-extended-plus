@@ -20,7 +20,7 @@ class slim_obj_info_t : public gui_frame_t
 	obj_view_t view;
 	gui_label_buf_t label;
 
-	uint16 old_date=65535;  // update and sticky flag
+	uint32 old_date = 0;
 	bool stickable = false; // has sticky and locked
 
 	void set_windowsize();

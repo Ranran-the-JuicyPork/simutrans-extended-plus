@@ -35,8 +35,11 @@ slim_obj_info_t::slim_obj_info_t(const obj_t* obj) :
 		}
 		case obj_t::baum:
 		{
-			old_date = 0;
 			const baum_t *baum = static_cast<const baum_t *>(obj);
+			old_date = world()->get_current_month();
+			const uint32 age = baum->get_age();
+			label.buf().printf(translator::translate("%i years %i months old."), age / 12, age % 12);
+			label.update();
 			maker = baum->get_desc()->get_copyright();
 			new_component<gui_label_t>(baum->get_desc()->get_name());
 			break;
@@ -100,20 +103,18 @@ void slim_obj_info_t::set_windowsize()
 
 void slim_obj_info_t::draw(scr_coord pos, scr_size size)
 {
-	if(old_date!=65535 && old_date != world()->get_timeline_year_month()) {
+	if (view.get_obj()->get_typ() == obj_t::baum && old_date != world()->get_current_month()) {
 		// update tree age label
-		if (const baum_t *baum = static_cast<const baum_t *>(view.get_obj())) {
-			old_date = world()->get_timeline_year_month();
-			const uint32 age = baum->get_age();
-			label.buf().printf( translator::translate("%i years %i months old."), age/12, (age%12) );
-			label.update();
-			set_windowsize();
-		}
+		const baum_t *baum = static_cast<const baum_t *>(view.get_obj());
+		old_date = world()->get_current_month();
+		const uint32 age = baum->get_age();
+		label.buf().printf(translator::translate("%i years %i months old."), age / 12, age % 12);
+		label.update();
+		set_windowsize();
 	}
 	gui_frame_t::draw(pos, size);
 	pos += view.get_pos() + scr_size(D_V_SPACE + 2, D_TITLEBAR_HEIGHT + 2);
 	display_proportional_clip_rgb(pos.x+1, pos.y+1, view.get_obj()->get_pos().get_2d().get_fullstr(), ALIGN_LEFT, color_idx_to_rgb(COL_BLACK), true);
 	display_proportional_clip_rgb(pos.x,   pos.y,   view.get_obj()->get_pos().get_2d().get_fullstr(), ALIGN_LEFT, color_idx_to_rgb(COL_WHITE), true);
 }
-
 
