@@ -51,6 +51,7 @@ slim_obj_info_t::slim_obj_info_t(const obj_t* obj) :
 			new_component<gui_label_t>(g_obj->get_desc()->get_name());
 
 			label.buf().append(translator::translate("cost for removal"));
+			label.buf().append(" ");
 			char buffer[128];
 			money_to_string( buffer, g_obj->get_desc()->get_value()/100.0 );
 			label.buf().append( buffer );
@@ -66,6 +67,7 @@ slim_obj_info_t::slim_obj_info_t(const obj_t* obj) :
 			new_component<gui_label_t>(m_obj->get_desc()->get_name());
 
 			label.buf().append(translator::translate("cost for removal"));
+			label.buf().append(" ");
 			char buffer[128];
 			money_to_string( buffer, m_obj->get_desc()->get_value()/100.0 );
 			label.buf().append( buffer );
@@ -117,4 +119,3 @@ void slim_obj_info_t::draw(scr_coord pos, scr_size size)
 	display_proportional_clip_rgb(pos.x+1, pos.y+1, view.get_obj()->get_pos().get_2d().get_fullstr(), ALIGN_LEFT, color_idx_to_rgb(COL_BLACK), true);
 	display_proportional_clip_rgb(pos.x,   pos.y,   view.get_obj()->get_pos().get_2d().get_fullstr(), ALIGN_LEFT, color_idx_to_rgb(COL_WHITE), true);
 }
-
