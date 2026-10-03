@@ -20,6 +20,8 @@
 #include "../simsignalbox.h"
 #include "../utils/simstring.h"
 
+#include <string>
+
 
 signal_info_t::signal_info_t(signal_t* const s) :
 	obj_infowin_t(s),
@@ -92,34 +94,26 @@ void signal_info_t::update_data()
 		if (gr) {
 			const gebaeude_t* gb = gr->get_building();
 			if (gb) {
-				char sb_name[1024] = { '\0' };
+				std::string sb_name(translator::translate(gb->get_name()));
 				int max_width = 250;
 				int max_lines = 5; // Set a limit
-				sprintf(sb_name, "%s", translator::translate(gb->get_name()));
 
-				//sprintf(sb_name,"This is a very very long signal box name which is so long that no one remembers what it was actually called before the super long name of the signalbox got changed to its current slightly longer name which is still too long to display in only one line therefore splitting this very long signalbox name into several lines although maximum five lines which should suffice more than enough to guard against silly long signal box names");
-				int next_char_index = 0;
+				size_t next_char_index = 0;
 
 				for (int l = 0; l < max_lines; l++) {
-					char temp_name[1024] = { '\0' };
-					next_char_index = display_fit_proportional(sb_name, max_width);
+					next_char_index = display_fit_proportional(sb_name.c_str(), max_width);
 
 					if (sb_name[next_char_index] == '\0') {
-						lb_sb_name.buf().append(sb_name);
+						lb_sb_name.buf().append(sb_name.c_str());
 						break;
 					}
 					else {
-						for (int i = 0; i < next_char_index; i++) {
-							temp_name[i] = sb_name[i];
-						}
-						lb_sb_name.buf().append(temp_name);
+						lb_sb_name.buf().append(sb_name.c_str(), next_char_index);
 						if (l + 1 == max_lines) {
 							lb_sb_name.buf().append("...");
 						}
 
-						for (int i = 0; sb_name[i] != '\0'; i++) {
-							sb_name[i] = sb_name[i + next_char_index];
-						}
+						sb_name.erase(0, next_char_index);
 					}
 				}
 
