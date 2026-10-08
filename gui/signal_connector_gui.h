@@ -32,6 +32,8 @@ class gui_signalbox_changer_t : public gui_aligned_container_t, private action_l
 public:
 	gui_signalbox_changer_t(signalbox_t* to, const signal_t *from);
 
+	bool is_valid() const;
+
 	void draw(scr_coord offset) OVERRIDE;
 
 	bool action_triggered(gui_action_creator_t*, value_t) OVERRIDE;

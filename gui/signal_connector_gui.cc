@@ -46,9 +46,14 @@ void gui_signalbox_changer_t::update()
 	label.update();
 }
 
+bool gui_signalbox_changer_t::is_valid() const
+{
+	return signalbox_t::all_signalboxes.is_contained(sb);
+}
+
 void gui_signalbox_changer_t::draw(scr_coord offset)
 {
-	if(sig && sb){
+	if (is_valid() && sig) {
 		if (connected != sb->get_signal_list().is_contained(sig->get_pos())) {
 			update();
 		}
@@ -60,7 +65,7 @@ void gui_signalbox_changer_t::draw(scr_coord offset)
 
 bool gui_signalbox_changer_t::action_triggered(gui_action_creator_t *comp, value_t)
 {
-	if( sig->get_owner() != world()->get_active_player() ) {
+	if (!is_valid() || sig->get_owner() != world()->get_active_player()) {
 		return false;
 	}
 	if (comp == &bt_connect) {
@@ -131,7 +136,7 @@ void signal_connector_gui_t::update(const signal_t* sig)
 		}
 		else {
 			for(gui_signalbox_changer_t* &selection : sb_selections) {
-				add_component(selection);
+				take_component(selection);
 			}
 		}
 		reset_min_windowsize();
@@ -154,17 +159,31 @@ bool signal_connector_gui_t::is_weltpos()
 void signal_connector_gui_t::map_rotate90(sint16 new_ysize)
 {
 	sig_pos.rotate90(new_ysize);
-	signal_t* sig = welt->lookup(sig_pos)->find<signal_t>();
+	grund_t* gr = welt->lookup(sig_pos);
+	signal_t* sig = gr ? gr->find<signal_t>() : NULL;
+	if (!sig) {
+		destroy_win(this);
+		return;
+	}
 	update(sig);
 }
 
 void signal_connector_gui_t::draw(scr_coord pos, scr_size size)
 {
-	signal_t* sig = welt->lookup(sig_pos)->find<signal_t>();
+	grund_t* gr = welt->lookup(sig_pos);
+	signal_t* sig = gr ? gr->find<signal_t>() : NULL;
 	if (!sig) {
 		destroy_win(this);
+		return;
+	}
+
+	for (gui_signalbox_changer_t* selection : sb_selections) {
+		if (!selection->is_valid()) {
+			update(sig);
+			set_windowsize(get_min_windowsize());
+			break;
+		}
 	}
 
 	gui_frame_t::draw(pos, size);
 }
-
