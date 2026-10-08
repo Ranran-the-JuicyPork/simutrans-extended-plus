@@ -212,7 +212,7 @@ void savegame_frame_t::add_section(std::string &name){
 void savegame_frame_t::add_path(const char * path){
 
 	if (!this->searchpath_defined) {
-		sprintf(this->searchpath, "%s", path);
+		this->searchpath = path;
 		this->searchpath_defined = true;
 	}
 	this->paths.append(path);
@@ -373,7 +373,11 @@ void savegame_frame_t::add_file(const char *fullpath, const char *filename, cons
 	strcpy(name, filename);
 
 	if(!no_cutting_suffix) {
-		name[strlen(name)-4] = '\0';
+		const size_t suffix_length = strlen(suffix);
+		const size_t name_length = strlen(name);
+		if (suffix_length <= name_length) {
+			name[name_length - suffix_length] = '\0';
+		}
 	}
 	button->set_typ( button_t::roundbox | button_t::flexible);
 	button->set_no_translate(true);
@@ -474,7 +478,20 @@ bool savegame_frame_t::infowin_event(const event_t *event)
 bool savegame_frame_t::check_file(const char *filename, const char *suffix)
 {
 	// assume truth, if there is no pattern to compare
-	return  suffix==NULL  ||  suffix[0]==0  ||  (strncmp(filename+strlen(filename)-4, suffix, 4)== 0);
+	if (suffix == NULL || suffix[0] == '\0') {
+		return true;
+	}
+
+	const size_t filename_length = strlen(filename);
+	const size_t suffix_length = strlen(suffix);
+	if (suffix[0] == '.') {
+		return filename_length >= suffix_length &&
+			strcmp(filename + filename_length - suffix_length, suffix) == 0;
+	}
+
+	return filename_length > suffix_length &&
+		filename[filename_length - suffix_length - 1] == '.' &&
+		strcmp(filename + filename_length - suffix_length, suffix) == 0;
 }
 
 
@@ -495,21 +512,26 @@ bool savegame_frame_t::action_triggered(gui_action_creator_t *component, value_t
 	if(component==&input  ||  component==&savebutton) {
 		// Save/Load Button or Enter-Key pressed
 		//---------------------------------------
-		if(strstart(ibuf, "net:")) {
-			tstrncpy(buf, ibuf, lengthof(buf));
+		const bool is_network_path = strstart(ibuf, "net:");
+		const char *prefix = !is_network_path && searchpath_defined ? searchpath.c_str() : "";
+		const char *extension = !is_network_path && suffix ? suffix : "";
+		const size_t prefix_length = strlen(prefix);
+		const size_t input_length = strlen(ibuf);
+		const size_t extension_length = strlen(extension);
+		const size_t max_length = sizeof(buf) - 1;
+
+		if (prefix_length > max_length ||
+			input_length > max_length - prefix_length ||
+			extension_length > max_length - prefix_length - input_length) {
+			dbg->warning("savegame_frame_t::action_triggered", "Filename is too long");
+			return true;
 		}
-		else {
-			if(searchpath_defined) {
-				tstrncpy(buf, searchpath, lengthof(buf));
-			}
-			else {
-				buf[0] = 0;
-			}
-			strcat(buf, ibuf);
-			if(suffix) {
-				strcat(buf, suffix);
-			}
-		}
+
+		memcpy(buf, prefix, prefix_length);
+		memcpy(buf + prefix_length, ibuf, input_length);
+		memcpy(buf + prefix_length + input_length, extension, extension_length);
+		buf[prefix_length + input_length + extension_length] = '\0';
+
 		ok_action(buf);
 		destroy_win(this);
 
