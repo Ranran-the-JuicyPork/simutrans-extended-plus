@@ -425,7 +425,7 @@ vehiclelist_frame_t::vehiclelist_frame_t() :
 		engine_filter.clear_elements();
 		engine_filter.new_component<gui_scrolled_list_t::const_text_scrollitem_t>(translator::translate("All traction types"), SYSCOL_TEXT);
 		for (int i = 0; i < vehicle_desc_t::MAX_TRACTION_TYPE; i++) {
-			engine_filter.new_component<gui_scrolled_list_t::const_text_scrollitem_t>(translator::translate(vehicle_builder_t::engine_type_names[(vehicle_desc_t::engine_t)i]), SYSCOL_TEXT);
+			engine_filter.new_component<gui_scrolled_list_t::const_text_scrollitem_t>(translator::translate(vehicle_builder_t::engine_type_names[i + 1]), SYSCOL_TEXT);
 		}
 		engine_filter.new_component<gui_scrolled_list_t::const_text_scrollitem_t>(translator::translate("Trailers"), SYSCOL_TEXT);
 		filter_flag = 0;
@@ -639,7 +639,7 @@ void vehiclelist_frame_t::fill_list()
 						}
 						break;
 					default:
-						if (((uint8)veh->get_engine_type()+1) != engine_filter.get_selection()-1) {
+						if (((uint8)veh->get_engine_type()+1) != engine_filter.get_selection()) {
 							continue;
 						}
 						break;
@@ -724,7 +724,7 @@ void vehiclelist_frame_t::fill_list()
 					}
 					break;
 				default:
-					if (((uint8)veh->get_engine_type()+1) != engine_filter.get_selection()-1) {
+					if (((uint8)veh->get_engine_type()+1) != engine_filter.get_selection()) {
 						continue;
 					}
 					break;
@@ -754,7 +754,7 @@ void vehiclelist_frame_t::fill_list()
 				timeline_matches = true; // show blue ones
 			}
 			if( !timeline_matches  &&  bt_timeline_filters[VL_SHOW_FUTURE].pressed  &&  veh->is_future(month) ) {
-				if( welt->get_settings().get_show_future_vehicle_info()  &&  veh->is_future(month)==1 ) {
+				if( !welt->get_settings().get_show_future_vehicle_info()  &&  veh->is_future(month)==1 ) {
 					// Do not show vehicles in the distant future with this setting
 					continue;
 				}
