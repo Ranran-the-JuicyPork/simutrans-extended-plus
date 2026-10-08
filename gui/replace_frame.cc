@@ -398,12 +398,12 @@ void replace_frame_t::set_vehicles(bool init)
 	}
 	else
 	{
-		vector_tpl<const vehicle_desc_t*> *existing_vehicles = new vector_tpl<const vehicle_desc_t*>();
+		vector_tpl<const vehicle_desc_t*> existing_vehicles;
 		for(uint8 i = 0; i < vehicle_count; i ++)
 		{
-			existing_vehicles->append(veh_tmp_list[i]->get_desc());
+			existing_vehicles.append(veh_tmp_list[i]->get_desc());
 		}
-		convoy_assembler.set_vehicles(existing_vehicles);
+		convoy_assembler.set_vehicles(&existing_vehicles);
 	}
 	for (uint8 i = vehicle_count; i-- != 0; ) {
 		world()->get_public_player()->book_vehicle_number(-1, cnv->front()->get_desc()->get_waytype());
@@ -571,6 +571,7 @@ bool replace_frame_t::replace_convoy(convoihandle_t cnv_rpl, bool mark)
 		return false;
 	}
 
+	bool replacement_issued = false;
 	switch (state)
 	{
 	case state_replace:
@@ -580,7 +581,7 @@ bool replace_frame_t::replace_convoy(convoihandle_t cnv_rpl, bool mark)
 			break;
 		}
 
-		if(!welt->get_active_player()->can_afford(0 - money))
+		if(!welt->get_active_player()->can_afford(0 - calc_total_cost(cnv_rpl)))
 		{
 			const char *err = NOTICE_INSUFFICIENT_FUNDS;
 			news_img *box = new news_img(err);
@@ -596,6 +597,7 @@ bool replace_frame_t::replace_convoy(convoihandle_t cnv_rpl, bool mark)
 			rpl->sprintf_replace(buf);
 
 			cnv_rpl->call_convoi_tool('R', buf);
+			replacement_issued = true;
 		}
 
 		else
@@ -603,6 +605,7 @@ bool replace_frame_t::replace_convoy(convoihandle_t cnv_rpl, bool mark)
 			cbuffer_t buf;
 			buf.append((long)master_convoy.get_id());
 			cnv_rpl->call_convoi_tool('C', buf);
+			replacement_issued = true;
 		}
 
 		if(!mark && depot && !rpl->get_autostart())
@@ -620,8 +623,7 @@ bool replace_frame_t::replace_convoy(convoihandle_t cnv_rpl, bool mark)
 	break;
 	}
 
-	replaced_so_far++;
-	return true;
+	return replacement_issued;
 }
 
 
