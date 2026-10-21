@@ -267,6 +267,7 @@ public:
 
 	// for updating info ...
 	void init_line_selector();
+	void set_new_line(linehandle_t line);
 
 	bool infowin_event(event_t const*) OVERRIDE;
 
