@@ -1236,7 +1236,7 @@ DBG_MESSAGE("schedule_gui_t::action_triggered()","comp=%p combo=%p",comp,&line_s
 		init_line_selector();
 	}
 	else if(comp == &bt_promote_to_line) {
-		// update line schedule via tool!
+		// Create the line from the edited schedule. The line tool will set the new selection.
 		tool_t *tool = create_tool( TOOL_CHANGE_LINE | SIMPLE_TOOL );
 		cbuffer_t buf;
 		buf.printf( "c,0,%i,%ld,", (int)schedule->get_type(), (long)(uint64)old_schedule );
@@ -1338,6 +1338,29 @@ DBG_MESSAGE("schedule_gui_t::action_triggered()","comp=%p combo=%p",comp,&line_s
 		update_selection();
 	}
 	return true;
+}
+
+
+void schedule_gui_t::set_new_line(linehandle_t line)
+{
+	if (!cnv.is_bound() || !line.is_bound()) {
+		return;
+	}
+
+	new_line = line;
+	stats->set_line_color_index(line->get_line_color_index());
+	img_electric.set_visible(line->needs_electrification());
+
+	min_range = min(line->get_min_range() ? line->get_min_range() : UINT16_MAX, min_range);
+	stats->range_limit = min_range;
+	if (min_range && min_range != UINT16_MAX) {
+		lb_min_range.buf().printf("%u km", min_range);
+		lb_min_range.update();
+	}
+	lb_min_range.set_visible(min_range && min_range != UINT16_MAX);
+
+	init_line_selector();
+	update_selection();
 }
 
 
