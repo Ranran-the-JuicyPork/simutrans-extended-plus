@@ -1347,6 +1347,7 @@ void schedule_gui_t::set_new_line(linehandle_t line)
 		return;
 	}
 
+	// Retain the explicit assignment to the newly created line while rebuilding the selector.
 	new_line = line;
 	stats->set_line_color_index(line->get_line_color_index());
 	img_electric.set_visible(line->needs_electrification());
@@ -1362,12 +1363,12 @@ void schedule_gui_t::set_new_line(linehandle_t line)
 	}
 	lb_min_range.set_visible(min_range && min_range != UINT16_MAX);
 
-	init_line_selector();
+	init_line_selector(true);
 	update_selection();
 }
 
 
-void schedule_gui_t::init_line_selector()
+void schedule_gui_t::init_line_selector(bool keep_current_line)
 {
 	if( cnv.is_bound() ) {
 		line_selector.clear_elements();
@@ -1376,8 +1377,9 @@ void schedule_gui_t::init_line_selector()
 
 		player->simlinemgmt.get_lines(cnv->get_schedule()->get_type(), &lines, line_type_flags, true);
 
-		// keep assignment with identical schedules
-		if (new_line.is_bound() && !cnv->get_schedule()->matches(welt, new_line->get_schedule())) {
+		// Revalidate ordinary selections against the convoy's current schedule.
+		// A newly created line is explicitly selected for the edited schedule instead.
+		if (!keep_current_line && new_line.is_bound() && !cnv->get_schedule()->matches(welt, new_line->get_schedule())) {
 			if (old_line.is_bound() && cnv->get_schedule()->matches(welt, old_line->get_schedule())) {
 				new_line = old_line;
 			}
