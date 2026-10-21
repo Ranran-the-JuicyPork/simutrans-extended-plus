@@ -1351,7 +1351,10 @@ void schedule_gui_t::set_new_line(linehandle_t line)
 	stats->set_line_color_index(line->get_line_color_index());
 	img_electric.set_visible(line->needs_electrification());
 
-	min_range = min(line->get_min_range() ? line->get_min_range() : UINT16_MAX, min_range);
+	min_range = line->get_min_range() ? line->get_min_range() : UINT16_MAX;
+	if (cnv->get_min_range()) {
+		min_range = min(min_range, cnv->get_min_range());
+	}
 	stats->range_limit = min_range;
 	if (min_range && min_range != UINT16_MAX) {
 		lb_min_range.buf().printf("%u km", min_range);
