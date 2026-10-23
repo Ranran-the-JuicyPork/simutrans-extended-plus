@@ -96,6 +96,7 @@ def main():
     parser.add_argument("--apply", action="store_true", help="write changes; default only previews")
     parser.add_argument("--include", action="append", default=[], help="extra extension, e.g. .xml")
     parser.add_argument("--exclude", action="append", default=[], help="extra directory name to skip")
+    parser.add_argument("--rename-files", action="store_true", help="also rename file paths (default: content-only)")
     args = parser.parse_args()
 
     root = args.root.resolve()
@@ -127,7 +128,7 @@ def main():
 
         updated, counts = replace_identifiers(original, rules)
         relative = path.relative_to(root)
-        new_relative, path_changes = renamed_path(relative, rules)
+        new_relative, path_changes = renamed_path(relative, rules) if args.rename_files else (relative, [])
         if updated != original or new_relative != relative:
             changes.append((path, root / new_relative, updated, counts, path_changes))
             for old, new, count in counts:
