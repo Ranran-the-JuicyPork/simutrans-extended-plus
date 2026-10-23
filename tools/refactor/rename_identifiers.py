@@ -42,7 +42,7 @@ def read_rules(path):
             raise SystemExit("Rule #{} has identical old/new values".format(number))
         if old in seen:
             raise SystemExit("Duplicate source identifier: {}".format(old))
-        if new in seen or new in targets:
+        if new in seen or new in targets or new in {item[0] for item in compiled}:
             raise SystemExit("Overlapping source/target mapping involving: {}".format(new))
         seen.add(old)
         targets.add(new)
