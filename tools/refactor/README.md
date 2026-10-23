@@ -14,10 +14,11 @@
    python rename_identifiers.py --root /path/to/simutrans-extended-plus
    ```
 
-4. 出力を確認してから適用します。
+4. 出力を確認してから適用します。識別子の内容置換だけを行い、ファイル名は変更しない場合は通常どおり実行します。ファイル名も変更する場合だけ `--rename-files` を追加します。
 
    ```sh
    python rename_identifiers.py --root /path/to/simutrans-extended-plus --apply
+   # ファイル名も変える場合は --rename-files を追加
    ```
 
 5. `git diff --stat`、`git diff --check`、検索、全ビルド設定、テスト結果を確認します。exjpでも同じルールをプレビューし、差分に適用できない名前や追加参照を確認してから適用します。
