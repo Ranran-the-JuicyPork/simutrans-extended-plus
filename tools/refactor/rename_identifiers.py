@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Preview or apply the shared, explicitly approved Simutrans rename rules.
+"""Preview/apply approved identifier renames in Simutrans source trees.
 
-Works in simutrans-extended-plus and simutrans-exjp.
-Default is dry-run. It performs exact token replacement, not C++ parsing.
-Always use a clean worktree and review the complete diff before building/testing.
+This text-based helper works in simutrans-extended-plus and simutrans-exjp.
+It does not parse C++: review the preview/diff and build both projects afterwards.
 """
 
 import argparse
@@ -33,6 +32,7 @@ def read_rules(path):
         raise SystemExit("Cannot read rules file {}: {}".format(path, exc))
     rules = data.get("identifier_rules", [])
     seen = set()
+    targets = set()
     compiled = []
     for number, rule in enumerate(rules, 1):
         old, new = rule.get("old"), rule.get("new")
@@ -42,13 +42,20 @@ def read_rules(path):
             raise SystemExit("Rule #{} has identical old/new values".format(number))
         if old in seen:
             raise SystemExit("Duplicate source identifier: {}".format(old))
+        if new in seen or new in targets:
+            raise SystemExit("Overlapping source/target mapping involving: {}".format(new))
         seen.add(old)
-        compiled.append({
-            "old": old,
-            "new": new,
-            "pattern": re.compile(r"(?<![A-Za-z0-9_])" + re.escape(old) + r"(?![A-Za-z0-9_])"),
-        })
-    return compiled
+        targets.add(new)
+        compiled.append((old, new))
+    # One combined pattern avoids cascading replacements such as A->B then B->C.
+    if not compiled:
+        return []
+    alternatives = sorted((re.escape(old) for old, _ in compiled), key=len, reverse=True)
+    token_pattern = re.compile(
+        r"(?<![A-Za-z0-9_])(?:" + "|".join(alternatives) + r")(?![A-Za-z0-9_])"
+    )
+    mapping = dict(compiled)
+    return [{"mapping": mapping, "pattern": token_pattern}]
 
 
 def walk_files(root, extensions, excludes):
@@ -67,25 +74,34 @@ def walk_files(root, extensions, excludes):
 
 
 def replace_identifiers(content, rules):
-    counts = []
-    for rule in rules:
-        content, count = rule["pattern"].subn(rule["new"], content)
-        if count:
-            counts.append((rule["old"], rule["new"], count))
-    return content, counts
+    if not rules:
+        return content, []
+    rule = rules[0]
+    counts = {}
+
+    def replace(match):
+        old = match.group(0)
+        new = rule["mapping"][old]
+        counts[(old, new)] = counts.get((old, new), 0) + 1
+        return new
+
+    result = rule["pattern"].sub(replace, content)
+    return result, [(old, new, count) for (old, new), count in sorted(counts.items())]
 
 
 def renamed_path(relative, rules):
-    parts = []
+    if not rules:
+        return relative, []
+    rule = rules[0]
     changes = []
+    parts = []
     for original_part in relative.parts:
-        part = original_part
-        for rule in rules:
-            replacement, count = rule["pattern"].subn(rule["new"], part)
-            if count:
-                changes.append((part, replacement))
-                part = replacement
-        parts.append(part)
+        def replace(match):
+            old = match.group(0)
+            new = rule["mapping"][old]
+            changes.append((old, new))
+            return new
+        parts.append(rule["pattern"].sub(replace, original_part))
     return Path(*parts), changes
 
 
@@ -130,14 +146,14 @@ def main():
         relative = path.relative_to(root)
         new_relative, path_changes = renamed_path(relative, rules) if args.rename_files else (relative, [])
         if updated != original or new_relative != relative:
-            changes.append((path, root / new_relative, updated, counts, path_changes))
+            changes.append((path, root / new_relative, original, updated, counts, path_changes))
             for old, new, count in counts:
                 totals[(old, new)] = totals.get((old, new), 0) + count
 
     print("{}: {} file(s) would be affected".format("APPLY" if args.apply else "DRY-RUN", len(changes)))
     for (old, new), count in sorted(totals.items()):
         print("  identifier {} -> {}: {} occurrence(s)".format(old, new, count))
-    for old_path, new_path, _, counts, path_changes in changes:
+    for old_path, new_path, _, _, counts, path_changes in changes:
         note = ", ".join("{} -> {} x{}".format(old, new, count) for old, new, count in counts)
         if old_path != new_path:
             note = (note + "; " if note else "") + "path {} -> {}".format(
@@ -155,26 +171,41 @@ def main():
     for old_path, new_path, *_ in changes:
         if old_path != new_path and new_path.exists():
             raise SystemExit("Refusing to overwrite existing path: {}".format(new_path.relative_to(root)))
-        if old_path != new_path and old_path.with_name(old_path.name + ".rename-tmp").exists():
-            raise SystemExit("Temporary path already exists: {}".format(old_path.with_name(old_path.name + ".rename-tmp")))
 
+    # Prepare every updated version first; no source file is overwritten until all writes succeed.
     staged = []
     try:
-        for old_path, new_path, updated, _, _ in changes:
-            temp_path = old_path.with_name(old_path.name + ".rename-tmp") if old_path != new_path else old_path
+        for old_path, new_path, original, updated, _, _ in changes:
+            temp_path = old_path.with_name(old_path.name + ".rename-tmp")
+            if temp_path.exists():
+                raise SystemExit("Temporary path already exists: {}".format(temp_path))
             temp_path.write_text(updated, encoding="utf-8", newline="")
-            staged.append((old_path, new_path, temp_path))
-        for old_path, new_path, temp_path in staged:
-            if old_path != new_path:
+            staged.append((old_path, new_path, original, temp_path))
+    except (OSError, SystemExit) as exc:
+        for _, _, _, temp_path in staged:
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
+        if isinstance(exc, SystemExit):
+            raise
+        print("ERROR while preparing files: {}".format(exc), file=sys.stderr)
+        return 2
+
+    committed = []
+    try:
+        for old_path, new_path, original, temp_path in staged:
+            if old_path == new_path:
+                os.replace(str(temp_path), str(old_path))
+            else:
                 new_path.parent.mkdir(parents=True, exist_ok=True)
-                temp_path.replace(new_path)
-            print("WROTE {}".format(new_path.relative_to(root)))
-        for old_path, new_path, _ in staged:
-            if old_path != new_path and old_path.exists():
+                os.replace(str(temp_path), str(new_path))
                 old_path.unlink()
+            committed.append((old_path, new_path, original))
+            print("WROTE {}".format(new_path.relative_to(root)))
     except OSError as exc:
         print("ERROR while applying changes: {}".format(exc), file=sys.stderr)
-        print("Inspect git status and any *.rename-tmp files before retrying.", file=sys.stderr)
+        print("Some files may already have been changed; inspect git status and restore from version control if needed.", file=sys.stderr)
         return 2
 
     print("Done. Inspect git diff, build, run tests, and validate both repositories.")
