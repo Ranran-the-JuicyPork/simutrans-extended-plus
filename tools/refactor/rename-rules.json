@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "description": "意図的に空の初期ルール。old/newの対応は、各リポジトリで全参照・外部連携・セーブ互換性への影響を調査し、承認してから追加する。",
+  "identifier_rules": []
+}
