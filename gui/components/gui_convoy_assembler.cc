@@ -1185,7 +1185,7 @@ int gui_convoy_assembler_t::remove_vehicle_at(uint8 nr, bool execute)
 	const vehicle_desc_t *removed_veh = vehicles[nr];
 	const vehicle_desc_t *last_veh = nr == 0 ? NULL : vehicles[nr-1];
 	uint8 chk_nr = nr;
-	uint8 removed_len = 0;
+	uint32 removed_len = 0;
 	uint32 removed_end = nr + 1;
 
 	do {
@@ -1229,7 +1229,7 @@ int gui_convoy_assembler_t::remove_vehicle_at(uint8 nr, bool execute)
 		if (removed_end == total_vehicles) {
 			new_last_veh_length = chk_nr > 0 ? vehicles[chk_nr - 1]->get_length() : 0;
 		}
-		tile_occupancy.set_new_veh_length(0 - removed_len, false, new_last_veh_length);
+		tile_occupancy.set_new_veh_length(-(sint32)removed_len, false, new_last_veh_length);
 	}
 
 	return removed_count;
@@ -2508,7 +2508,7 @@ void gui_convoy_assembler_t::update_vehicle_info_text(scr_coord pos)
 						if (way_type != water_wt && way_type != air_wt) {
 							if (cnv->get_vehicle_count() == 1) {
 								// "Extra margin" needs to be removed
-								tile_occupancy.set_new_veh_length(0 - cnv->get_length(), false, 0);
+								tile_occupancy.set_new_veh_length(-(sint32)cnv->get_length(), false, 0);
 								vehicle_fluctuation = -1;
 							}
 							else {
@@ -2521,7 +2521,7 @@ void gui_convoy_assembler_t::update_vehicle_info_text(scr_coord pos)
 								vehicle_fluctuation = 0 - cnv->get_auto_removal_vehicle_count(sel_index);
 								// TODO: Auto continuous removal may have incorrect last vehicle length
 
-								tile_occupancy.set_new_veh_length(0 - removal_len, false, new_last_veh_length);
+								tile_occupancy.set_new_veh_length(-(sint32)removal_len, false, new_last_veh_length);
 							}
 							tile_occupancy.set_assembling_incomplete(false);
 						}
