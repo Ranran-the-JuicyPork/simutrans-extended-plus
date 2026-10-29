@@ -1128,7 +1128,7 @@ bool gui_convoy_assembler_t::action_triggered( gui_action_creator_t *comp,value_
 		else if (comp == &livery_selector)
 		{
 			sint32 livery_selection = p.i;
-			if (livery_selection < 0 || (uint32)livery_selection >= livery_scheme_indices.size())
+			if (livery_selection < 0 || (uint32)livery_selection >= livery_scheme_indices.get_count())
 			{
 				livery_selector.set_selection(0);
 				livery_selection = 0;
