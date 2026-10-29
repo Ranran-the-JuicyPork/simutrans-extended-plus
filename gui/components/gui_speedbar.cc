@@ -116,16 +116,18 @@ void gui_tile_occupancybar_t::draw(scr_coord offset)
 	const uint8	extra_margin = current_length - convoy_length;
 	const sint32 proposed_length_signed = (sint32)convoy_length + new_veh_length;
 	const uint32 proposed_length = proposed_length_signed > 0 ? (uint32)proposed_length_signed : 0;
-	uint32 new_length = 0;
+	uint32 new_length = current_length;
 
-	if (insert_mode && new_veh_length != 0) {
-		new_length = adjust_convoy_length(proposed_length, last_veh_length);
-	}
-	else if (new_veh_length <= 0) {
-		new_length = adjust_convoy_length(proposed_length, switched_last_veh_length);
-	}
-	else if(new_veh_length != 0) {
-		new_length = adjust_convoy_length(proposed_length, (uint8)min((sint32)0xFF, new_veh_length));
+	if (new_veh_length != 0) {
+		if (insert_mode) {
+			new_length = adjust_convoy_length(proposed_length, last_veh_length);
+		}
+		else if (new_veh_length < 0) {
+			new_length = adjust_convoy_length(proposed_length, switched_last_veh_length);
+		}
+		else {
+			new_length = adjust_convoy_length(proposed_length, (uint8)min((sint32)0xFF, new_veh_length));
+		}
 	}
 
 	const sint32 len_diff = (sint32)new_length - (sint32)current_length;
