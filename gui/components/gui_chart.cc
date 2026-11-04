@@ -241,15 +241,8 @@ void gui_chart_t::draw_curves(const chart_layout_t& layout, sint64 baseline, dou
 			// for each curve iterate through all elements and display curve
 			for (int i = start; i < end; i++) {
 
-				tmp = c.values[i*c.size+c.offset];
-				// convert value where necessary
-				if(  c.convert  ) {
-					tmp = c.convert(tmp);
-					display_tmp = tmp;
-				}
-				else {
-					display_tmp = tmp;
-				}
+				tmp = get_curve_value(c, i);
+				display_tmp = get_curve_display_value(c, tmp);
 
 				// display marker(box) for financial value
 				if (i < end) {
@@ -279,26 +272,9 @@ void gui_chart_t::draw_curves(const chart_layout_t& layout, sint64 baseline, dou
 					}
 				}
 
-				if (c.type == KMPH) {
-					display_tmp = (double)speed_to_kmh(tmp*10)/10.0;
-				}
-				else {
-					display_tmp = tmp / pow(10, c.precision);
-				}
 
 				// display tooltip?
-				if(i==tooltip_n  &&  abs((int)(baseline-(int)(tmp/scale)-tooltipcoord.y))<10) {
-					if (c.type == TIME) {
-						world()->sprintf_time_secs(tooltip, sizeof(tooltip), display_tmp);
-					}
-					else {
-						number_to_string(tooltip, display_tmp, c.precision);
-						if (c.suffix) {
-							strcat(tooltip, c.suffix);
-						}
-					}
-					win_set_tooltip(get_mouse_pos() + TOOLTIP_MOUSE_OFFSET, tooltip );
-				}
+				show_curve_tooltip(c, i, tooltip_n, tmp, display_tmp, baseline, scale);
 
 				// draw line between two financial markers; this is only possible from the second value on
 				if (i > start && i < end) {
@@ -337,80 +313,124 @@ void gui_chart_t::draw_curves(const chart_layout_t& layout, sint64 baseline, dou
 
 void gui_chart_t::calc_gui_chart_values(sint64 *baseline, double *scale, char *cmin, char *cmax, int maximum_axis_len) const
 {
-	sint64 tmp=0;
-	double min = 0, max = 0;
-	const char* min_suffix = NULL;
-	const char* max_suffix = NULL;
-	int precision = 0;
+	chart_value_range_t range;
+	calc_gui_chart_range(range);
+	format_gui_chart_axis_labels(range, cmin, cmax, maximum_axis_len);
+	calc_gui_chart_scale(range, baseline, scale);
+}
 
-	bool convert_kmph = false; // for speed chart. Converts the scale from simspeed to km/h.
-// 	bool convert_n_to_kn = false; // for force chart
-	bool convert_time = false; // for comfort chart. dont use this with other units
+
+sint64 gui_chart_t::get_curve_value(const curve_t& curve, int index) const
+{
+	sint64 value = curve.values[index*curve.size+curve.offset];
+	return curve.convert ? curve.convert(value) : value;
+}
+
+
+double gui_chart_t::get_curve_display_value(const curve_t& curve, sint64 value) const
+{
+	if (curve.type == KMPH) {
+		return (double)speed_to_kmh(value*10)/10.0;
+	}
+	return value / pow(10, curve.precision);
+}
+
+
+void gui_chart_t::show_curve_tooltip(const curve_t& curve, int index, int tooltip_index, sint64 value, double display_value, sint64 baseline, double scale) const
+{
+	if (index == tooltip_index && abs((int)(baseline-(int)(value/scale)-tooltipcoord.y)) < 10) {
+		if (curve.type == TIME) {
+			world()->sprintf_time_secs(tooltip, sizeof(tooltip), display_value);
+		}
+		else {
+			number_to_string(tooltip, display_value, curve.precision);
+			if (curve.suffix) {
+				strcat(tooltip, curve.suffix);
+			}
+		}
+		win_set_tooltip(get_mouse_pos() + TOOLTIP_MOUSE_OFFSET, tooltip );
+	}
+}
+
+
+void gui_chart_t::calc_gui_chart_range(chart_value_range_t& range) const
+{
+	sint64 tmp = 0;
+	range.min_value = 0;
+	range.max_value = 0;
+	range.min_suffix = NULL;
+	range.max_suffix = NULL;
+	range.precision = 0;
+	range.convert_kmph = false;
+	range.convert_time = false;
 
 	for(curve_t const& c : curves) {
 		if(  c.show  ) {
 			for(  int i=0;  i<c.elements;  i++  ) {
-				tmp = c.values[i*c.size+c.offset];
-				// convert value where necessary
-				if(  c.convert  ) {
-					tmp = c.convert(tmp);
+				tmp = get_curve_value(c, i);
+				if (!c.convert && c.type == KMPH) {
+					range.convert_kmph = true;
+					range.precision = 0;
 				}
-				else if (  c.type == KMPH  ) {
-					convert_kmph = true;
-					precision = 0;
+				else if (!c.convert && c.type == TIME) {
+					range.convert_time = true;
+					range.precision = 0;
 				}
-				else if (  c.type == TIME  ) {
-					convert_time = true;
-					precision = 0;
+				else if (!c.convert && c.type == FORCE) {
+// 					// convert_n_to_kn remains unused for the existing force chart.
 				}
-				else if (  c.type == FORCE  ) {
-// 					convert_n_to_kn = true;
-					// precision does not need to be changed. The running resistance is so small (in kN) that we need to display the decimal point.
+				if (range.min_value > tmp) {
+					range.min_value = tmp;
+					range.precision = c.precision;
+					range.min_suffix = c.suffix;
 				}
-				if (min > tmp) {
-					min = tmp ;
-					precision = c.precision;
-					min_suffix = c.suffix;
-				}
-				if (max < tmp) {
-					max = tmp;
-					precision = c.precision;
-					max_suffix = c.suffix;
+				if (range.max_value < tmp) {
+					range.max_value = tmp;
+					range.precision = c.precision;
+					range.max_suffix = c.suffix;
 				}
 			}
 		}
 	}
 
 	// max happend due to rounding errors
-	if( precision == 0   &&  min == max ) {
-		max += 1;
+	if( range.precision == 0   &&  range.min_value == range.max_value ) {
+		range.max_value += 1;
 	}
+}
 
-	if (convert_time) {
-		world()->sprintf_time_secs(cmin, 32, (uint32)min);
-		world()->sprintf_time_secs(cmax, 32, (uint32)max);
+
+void gui_chart_t::format_gui_chart_axis_labels(const chart_value_range_t& range, char* cmin, char* cmax, int maximum_axis_len) const
+{
+	if (range.convert_time) {
+		world()->sprintf_time_secs(cmin, 32, (uint32)range.min_value);
+		world()->sprintf_time_secs(cmax, 32, (uint32)range.max_value);
 	}
 	else {
 		// if accel chart => Drawing accuracy hack: simspeed to integer km/h. (Do not rewrite min max for scaling)
-		number_to_string_fit(cmin, convert_kmph ? speed_to_kmh((int)min) : (double)min/pow(10,precision), precision, maximum_axis_len - (min_suffix != 0));
-		number_to_string_fit(cmax, convert_kmph ? speed_to_kmh((int)max) : (double)max/pow(10,precision), precision, maximum_axis_len - (max_suffix != 0));
+		number_to_string_fit(cmin, range.convert_kmph ? speed_to_kmh((int)range.min_value) : (double)range.min_value/pow(10,range.precision), range.precision, maximum_axis_len - (range.min_suffix != 0));
+		number_to_string_fit(cmax, range.convert_kmph ? speed_to_kmh((int)range.max_value) : (double)range.max_value/pow(10,range.precision), range.precision, maximum_axis_len - (range.max_suffix != 0));
 
-		if(  min_suffix  ) {
-			strcat( cmin, min_suffix );
+		if(  range.min_suffix  ) {
+			strcat( cmin, range.min_suffix );
 		}
-		if(  max_suffix  ) {
-			strcat( cmax, max_suffix );
+		if(  range.max_suffix  ) {
+			strcat( cmax, range.max_suffix );
 		}
 	}
+}
 
+
+void gui_chart_t::calc_gui_chart_scale(const chart_value_range_t& range, sint64* baseline, double* scale) const
+{
 	// scale: factor to calculate money with, to get y-pos offset
-	*scale = (double)(max - min) / (size.h-1-4-LINESPACE);
+	*scale = (double)(range.max_value - range.min_value) / (size.h-1-4-LINESPACE);
 	if(*scale==0.0) {
 		*scale = 1.0;
 	}
 
 	// baseline: y-pos for the "zero" line in the chart
-	*baseline = (sint64)(size.h-1-4-LINESPACE - labs((sint64)(min / *scale )));
+	*baseline = (sint64)(size.h-1-4-LINESPACE - labs((sint64)(range.min_value / *scale )));
 }
 
 
