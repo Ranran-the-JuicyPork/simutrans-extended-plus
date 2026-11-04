@@ -105,6 +105,24 @@ public:
 
 	void set_min_size(scr_size);
 private:
+	/*
+	 * curve struct
+	 */
+	struct curve_t {
+		PIXVAL color;
+		const sint64 *values;
+		int size;
+		int offset;
+		int elements;
+		bool show;
+		bool show_value;      // show first value of curve as number on chart?
+		int type;             // 0 = standard, 1 = money, 2 = percent
+		const char* suffix;
+		chart_marker_t marker_type;
+		int precision;        // how many numbers ...
+		convert_proc convert; // procedure for converting supplied values before use
+	};
+
 	struct chart_value_range_t {
 		double min_value;
 		double max_value;
@@ -135,24 +153,6 @@ private:
 	void format_gui_chart_axis_labels(const chart_value_range_t& range, char* cmin, char* cmax, int maximum_axis_len) const;
 	void calc_gui_chart_scale(const chart_value_range_t& range, sint64* baseline, double* scale) const;
 	void calc_gui_chart_values(sint64 *baseline, double *scale, char *, char *, int precision ) const;
-
-	/*
-	 * curve struct
-	 */
-	struct curve_t {
-		PIXVAL color;
-		const sint64 *values;
-		int size;
-		int offset;
-		int elements;
-		bool show;
-		bool show_value;      // show first value of curve as number on chart?
-		int type;             // 0 = standard, 1 = money, 2 = percent
-		const char* suffix;
-		chart_marker_t marker_type;
-		int precision;        // how many numbers ...
-		convert_proc convert; // procedure for converting supplied values before use
-	};
 
 	slist_tpl <curve_t> curves;
 
