@@ -114,34 +114,43 @@ void gui_chart_t::show_curve(unsigned int id)
 
 void gui_chart_t::draw(scr_coord offset)
 {
-	scr_coord chart_offset(100,0);
-	int maximum_axis_len = 22;
+	chart_layout_t layout;
+	layout.chart_offset = scr_coord(100,0);
+	layout.maximum_axis_len = 22;
 
 	// Only charts with a changeable orientation will follow the env_t::left_to_right_graphs setting.
-	const bool left_to_right_graph = (ltr==1) ? env_t::left_to_right_graphs : (ltr==2) ? false : true;
+	layout.left_to_right_graph = (ltr==1) ? env_t::left_to_right_graphs : (ltr==2) ? false : true;
 
 	offset += pos;
 	if(  size.w<D_DEFAULT_WIDTH  ) {
-		chart_offset.x = size.w/6;
-		maximum_axis_len = max(7,chart_offset.x/6);
+		layout.chart_offset.x = size.w/6;
+		layout.maximum_axis_len = max(7,layout.chart_offset.x/6);
 	}
 
-	offset += chart_offset;
-	scr_size chart_size = size-chart_offset-scr_size(10,4+LINESPACE);
+	offset += layout.chart_offset;
+	layout.offset = offset;
+	layout.chart_size = size-layout.chart_offset-scr_size(10,4+LINESPACE);
 
-	sint64 last_year=0, tmp=0;
-	char cmin[128] = "0", cmax[128] = "0", digit[11];
-
+	char cmin[128] = "0", cmax[128] = "0";
 	sint64 baseline = 0;
-	sint64* pbaseline = &baseline;
-
 	double scale = 0;
-	double* pscale = &scale;
 
 	// calc baseline and scale
-	calc_gui_chart_values(pbaseline, pscale, cmin, cmax, 18);
+	calc_gui_chart_values(&baseline, &scale, cmin, cmax, 18);
 
-	// draw background if desired
+	draw_axes(layout, baseline, cmin, cmax);
+	draw_curves(layout, baseline, scale, cmin);
+}
+
+
+void gui_chart_t::draw_axes(chart_layout_t& layout, sint64 baseline, const char* cmin, const char* cmax) const
+{
+	const scr_coord offset = layout.offset;
+	const scr_coord chart_offset = layout.chart_offset;
+	const scr_size chart_size = layout.chart_size;
+	const int maximum_axis_len = layout.maximum_axis_len;
+	const bool left_to_right_graph = layout.left_to_right_graph;
+	char digit[11];
 	if(background != TRANSPARENT_FLAGS) {
 		display_fillbox_wh_clip_rgb(offset.x, offset.y, chart_size.w, chart_size.h, background, false);
 	}
@@ -207,7 +216,23 @@ void gui_chart_t::draw(scr_coord offset)
 		}
 	}
 
-	// draw chart's curves
+	layout.x_origin = tmpx;
+	layout.x_direction = factor;
+	layout.tooltip_index = tooltip_n;
+}
+
+
+void gui_chart_t::draw_curves(const chart_layout_t& layout, sint64 baseline, double scale, char* cmin) const
+{
+	const scr_coord offset = layout.offset;
+	const scr_size chart_size = layout.chart_size;
+	const int maximum_axis_len = layout.maximum_axis_len;
+	const bool left_to_right_graph = layout.left_to_right_graph;
+	const int tooltip_n = layout.tooltip_index;
+	const int tmpx = layout.x_origin;
+	const int factor = layout.x_direction;
+	sint64 last_year = 0;
+	sint64 tmp = 0;
 	for(curve_t const& c : curves) {
 		if (c.show) {
 			double display_tmp;
@@ -307,6 +332,7 @@ void gui_chart_t::draw(scr_coord offset)
 		last_year=tmp=0;
 	}
 }
+
 
 
 void gui_chart_t::calc_gui_chart_values(sint64 *baseline, double *scale, char *cmin, char *cmax, int maximum_axis_len) const
