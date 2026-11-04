@@ -377,7 +377,8 @@ void gui_chart_t::calc_gui_chart_range(chart_value_range_t& range) const
 					range.precision = 0;
 				}
 				else if (!c.convert && c.type == FORCE) {
-// 					// convert_n_to_kn remains unused for the existing force chart.
+// 					convert_n_to_kn = true;
+// 					// Precision does not need to be changed. The running resistance is so small (in kN) that we need to display the decimal point.
 				}
 				if (range.min_value > tmp) {
 					range.min_value = tmp;
