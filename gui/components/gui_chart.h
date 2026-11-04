@@ -105,6 +105,19 @@ public:
 
 	void set_min_size(scr_size);
 private:
+	struct chart_layout_t {
+		scr_coord offset;
+		scr_coord chart_offset;
+		scr_size chart_size;
+		int maximum_axis_len;
+		bool left_to_right_graph;
+		int x_origin;
+		int x_direction;
+		int tooltip_index;
+	};
+
+	void draw_axes(chart_layout_t& layout, sint64 baseline, const char* cmin, const char* cmax) const;
+	void draw_curves(const chart_layout_t& layout, sint64 baseline, double scale, char* cmin) const;
 	void calc_gui_chart_values(sint64 *baseline, double *scale, char *, char *, int precision ) const;
 
 	/*
