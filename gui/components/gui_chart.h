@@ -105,6 +105,16 @@ public:
 
 	void set_min_size(scr_size);
 private:
+	struct chart_value_range_t {
+		double min_value;
+		double max_value;
+		const char* min_suffix;
+		const char* max_suffix;
+		int precision;
+		bool convert_kmph;
+		bool convert_time;
+	};
+
 	struct chart_layout_t {
 		scr_coord offset;
 		scr_coord chart_offset;
@@ -118,6 +128,12 @@ private:
 
 	void draw_axes(chart_layout_t& layout, sint64 baseline, const char* cmin, const char* cmax) const;
 	void draw_curves(const chart_layout_t& layout, sint64 baseline, double scale, char* cmin) const;
+	sint64 get_curve_value(const curve_t& curve, int index) const;
+	double get_curve_display_value(const curve_t& curve, sint64 value) const;
+	void show_curve_tooltip(const curve_t& curve, int index, int tooltip_index, sint64 value, double display_value, sint64 baseline, double scale) const;
+	void calc_gui_chart_range(chart_value_range_t& range) const;
+	void format_gui_chart_axis_labels(const chart_value_range_t& range, char* cmin, char* cmax, int maximum_axis_len) const;
+	void calc_gui_chart_scale(const chart_value_range_t& range, sint64* baseline, double* scale) const;
 	void calc_gui_chart_values(sint64 *baseline, double *scale, char *, char *, int precision ) const;
 
 	/*
