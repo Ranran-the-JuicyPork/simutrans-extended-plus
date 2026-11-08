@@ -113,7 +113,6 @@ void gui_tile_occupancybar_t::draw(scr_coord offset)
 
 	// calculate internal convoy length (include margin)
 	const uint32 current_length = adjust_convoy_length(convoy_length, last_veh_length);
-	const uint8	extra_margin = current_length - convoy_length;
 	const sint32 proposed_length_signed = (sint32)convoy_length + new_veh_length;
 	const uint32 proposed_length = proposed_length_signed > 0 ? (uint32)proposed_length_signed : 0;
 	uint32 new_length = current_length;
