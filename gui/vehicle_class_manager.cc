@@ -397,23 +397,13 @@ bool gui_accommo_fare_changer_t::action_triggered(gui_action_creator_t *comp, va
 
 void gui_accommo_fare_changer_t::change_convoy_fare_class(convoihandle_t cnv_, uint8 target_fare)
 {
+	// This row represents one accommodation class across the whole convoy.
+	// Use the convoy-wide command so every matching compartment is changed in one operation.
 	cbuffer_t buf;
-	for (uint8 i = 0; i<cnv_->get_vehicle_count(); ++i) {
-		const vehicle_t* veh = cnv_->get_vehicle(i);
-		const uint8 catg_index = veh->get_cargo_type()->get_catg_index();
-		if (acm.catg_index != catg_index) continue;
-		const uint8 number_of_classes = goods_manager_t::get_classes_catg_index(catg_index);
-		for ( uint8 ac=0; ac<number_of_classes; ++ac ) {
-			if( !veh->get_desc()->get_capacity(ac) ) continue;
-			accommodation_t acm_temp;
-			acm_temp.set_accommodation(veh->get_desc(), ac);
-			if ( acm.is_match(acm_temp)  &&  current_fare==veh->get_reassigned_class(ac) ) {
-				buf.clear();
-				buf.printf("%hhi,%hhi,%hhi", i, ac, target_fare);
-				cnv_->call_convoi_tool('j', buf);
-			}
-		}
-	}
+	buf.printf("%hu,%hu,%i", (uint16)acm.accommo_class, (uint16)target_fare,
+		acm.catg_index == goods_manager_t::INDEX_PAS ? 0 : 1);
+	cnv_->call_convoi_tool('c', buf);
+
 	vehicle_class_manager_t *win = dynamic_cast<vehicle_class_manager_t*>(win_get_magic((ptrdiff_t)(magic_class_manager + cnv.get_id())));
 	if (win) {
 		win->recalc_income();
