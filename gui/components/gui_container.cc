@@ -82,10 +82,15 @@ bool gui_container_t::infowin_event(const event_t *ev)
 			event_t ev2 = *ev;
 			ev2.move_origin(comp_focus->get_pos());
 			swallowed = comp_focus->infowin_event(&ev2);
+			// The focused child may have removed itself while handling this event.
+			if (list_dirty) {
+				new_focus = comp_focus;
+				swallowed = true;
+			}
 		}
 
 		// either event not swallowed, or inner container has no focused child component after TAB event
-		if(  !swallowed  ||  (ev->ev_code==SIM_KEY_TAB  &&  comp_focus  &&  comp_focus->get_focus()==NULL)  ) {
+		if(  !list_dirty  &&  (!swallowed  ||  (ev->ev_code==SIM_KEY_TAB  &&  comp_focus  &&  comp_focus->get_focus()==NULL))  ) {
 			if(  ev->ev_code==SIM_KEY_TAB  ) {
 				// TAB: find new focus
 				new_focus = NULL;
@@ -120,7 +125,13 @@ bool gui_container_t::infowin_event(const event_t *ev)
 					new_focus->infowin_event(&ev2);
 				}
 
-				swallowed = comp_focus!=new_focus;
+				if (list_dirty) {
+					new_focus = comp_focus;
+					swallowed = true;
+				}
+				else {
+					swallowed = comp_focus!=new_focus;
+				}
 			}
 			else if(  ev->ev_code==SIM_KEY_ENTER  ||  ev->ev_code==SIM_KEY_ESCAPE  ) {
 				new_focus = NULL;
@@ -143,13 +154,20 @@ bool gui_container_t::infowin_event(const event_t *ev)
 			ev2.move_origin(comp->get_pos());
 			swallowed = comp->infowin_event(&ev2);
 
-			// set focus for component, if component allows focus
-			gui_component_t *const focus = comp->get_focus() ? comp : NULL;
-			if(  focus  &&  IS_LEFTCLICK(ev)  &&  comp->getroffen( ev->click_pos)  ) {
-				/* the focus swallow all following events;
-				 * due to the activation action
-				 */
-				new_focus = focus;
+			// The focused child may have removed itself while handling this event.
+			if (list_dirty) {
+				new_focus = comp_focus;
+				swallowed = true;
+			}
+			else {
+				// set focus for component, if component allows focus
+				gui_component_t *const focus = comp->get_focus() ? comp : NULL;
+				if(  focus  &&  IS_LEFTCLICK(ev)  &&  comp->getroffen( ev->click_pos)  ) {
+					/* the focus swallow all following events;
+					 * due to the activation action
+					 */
+					new_focus = focus;
+				}
 			}
 		}
 
@@ -204,6 +222,14 @@ bool gui_container_t::infowin_event(const event_t *ev)
 
 				// CAUTION : call to infowin_event() should not delete the component itself!
 				swallowed = comp->infowin_event(&ev2);
+
+				// The callback may have removed and destroyed this component.
+				// Do not dereference it again after the container becomes dirty.
+				if (list_dirty) {
+					new_focus = comp_focus;
+					swallowed = true;
+					break;
+				}
 
 				// set focus for component, if component allows focus
 				gui_component_t *focus = comp->get_focus() ? comp : NULL;
