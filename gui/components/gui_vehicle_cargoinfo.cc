@@ -7,6 +7,7 @@
 #include "gui_colorbox.h"
 #include "gui_destination_building_info.h"
 #include "gui_vehicle_capacitybar.h"
+#include "gui_table.h"
 
 #include "../../simconvoi.h"
 #include "../../simcolor.h"
@@ -172,9 +173,18 @@ void gui_vehicle_cargo_info_t::update()
 	const bool is_pass_veh = veh->get_cargo_type()->get_catg_index() == goods_manager_t::INDEX_PAS;
 	const bool is_mail_veh = veh->get_cargo_type()->get_catg_index() == goods_manager_t::INDEX_MAIL;
 
-	for (uint8 ac = 0; ac < number_of_classes; ac++) { // accommo class index
-		if (!veh->get_desc()->get_capacity(ac) && !veh->get_overcrowded_capacity(ac)) {
-			continue; // no capacity for this accommo class
+	for (uint8 ac = 0; ac < number_of_classes; ac++) { // accommodation class index
+		const uint8 fare_class = veh->get_reassigned_class(ac);
+		bool first_accommodation_for_fare_class = true;
+		for (uint8 previous_ac = 0; previous_ac < ac; previous_ac++) {
+			if (veh->get_reassigned_class(previous_ac) == fare_class) {
+				first_accommodation_for_fare_class = false;
+				break;
+			}
+		}
+		const uint16 overcrowded_capacity = first_accommodation_for_fare_class ? veh->get_overcrowded_capacity(fare_class) : 0;
+		if (!veh->get_desc()->get_capacity(ac) && !overcrowded_capacity) {
+			continue; // no capacity for this accommodation class
 		}
 
 		add_table(2,1);
@@ -204,8 +214,8 @@ void gui_vehicle_cargo_info_t::update()
 			lb->buf().append(":");
 			// [capacity]
 			lb->buf().printf("%4d/%3d", veh->get_total_cargo_by_class(ac),veh->get_desc()->get_capacity(ac));
-			if (veh->get_overcrowded_capacity(ac)) {
-				lb->buf().printf("(%u)", veh->get_overcrowded_capacity(ac));
+			if (overcrowded_capacity) {
+				lb->buf().printf("(%u)", overcrowded_capacity);
 			}
 			lb->update();
 
