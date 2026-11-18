@@ -174,14 +174,21 @@ void gui_vehicle_cargo_info_t::update()
 
 	for (uint8 ac = 0; ac < number_of_classes; ac++) { // accommodation class index
 		const uint8 fare_class = veh->get_reassigned_class(ac);
-		bool first_accommodation_for_fare_class = true;
-		for (uint8 previous_ac = 0; previous_ac < ac; previous_ac++) {
-			if (veh->get_reassigned_class(previous_ac) == fare_class) {
-				first_accommodation_for_fare_class = false;
-				break;
+		// Attach the fare-class overcrowding capacity to the first accommodation class
+		// that has regular capacity. Fall back to the first mapped class if none has any.
+		uint8 overcrowded_capacity_ac = number_of_classes;
+		for (uint8 candidate_ac = 0; candidate_ac < number_of_classes; candidate_ac++) {
+			if (veh->get_reassigned_class(candidate_ac) == fare_class) {
+				if (overcrowded_capacity_ac == number_of_classes) {
+					overcrowded_capacity_ac = candidate_ac;
+				}
+				if (veh->get_desc()->get_capacity(candidate_ac) > 0) {
+					overcrowded_capacity_ac = candidate_ac;
+					break;
+				}
 			}
 		}
-		const uint16 overcrowded_capacity = first_accommodation_for_fare_class ? veh->get_overcrowded_capacity(fare_class) : 0;
+		const uint16 overcrowded_capacity = ac == overcrowded_capacity_ac ? veh->get_overcrowded_capacity(fare_class) : 0;
 		if (!veh->get_desc()->get_capacity(ac) && !overcrowded_capacity) {
 			continue; // no capacity for this accommodation class
 		}
