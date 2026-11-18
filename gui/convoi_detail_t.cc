@@ -1751,7 +1751,9 @@ void gui_convoy_payload_info_t::update_list()
 			// right part
 			add_table(2,2);
 			{
-				gui_label_buf_t *lb = new_component_span<gui_label_buf_t>(SYSCOL_TEXT, gui_label_t::left, 2);
+				gui_table_header_buf_t *lb = new_component_span<gui_table_header_buf_t>("", SYSCOL_TH_BACKGROUND_TOP, gui_label_t::left, true, 2);
+				lb->set_flexible(true, false);
+				lb->set_bold();
 				lb->buf().append(translator::translate(veh->get_desc()->get_name()));
 				lb->update();
 				new_component<gui_margin_t>(LINESPACE>>1);
