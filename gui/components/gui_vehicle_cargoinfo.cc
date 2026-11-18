@@ -7,7 +7,6 @@
 #include "gui_colorbox.h"
 #include "gui_destination_building_info.h"
 #include "gui_vehicle_capacitybar.h"
-#include "gui_table.h"
 
 #include "../../simconvoi.h"
 #include "../../simcolor.h"
